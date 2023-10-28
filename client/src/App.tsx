@@ -13,7 +13,7 @@ const pc_config = {
     },
   ],
 };
-const SOCKET_SERVER_URL = "http://localhost:8080";
+const SOCKET_SERVER_URL = "http://5.39.249.237";
 
 const App = () => {
   const socketRef = useRef<any>();
