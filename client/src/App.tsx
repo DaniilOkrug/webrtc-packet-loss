@@ -44,7 +44,7 @@ const App = () => {
         console.log(e);
       };
       pcRef.current.ontrack = (ev) => {
-        console.log("add remotetrack success");
+        console.log("add remotetrack success", ev);
         if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = ev.streams[0];
         }
@@ -100,7 +100,7 @@ const App = () => {
     });
 
     socketRef.current.on("getOffer", (sdp: RTCSessionDescription) => {
-      //console.log(sdp);
+      console.log(sdp);
       console.log("get offer");
       createAnswer(sdp);
     });
@@ -109,7 +109,7 @@ const App = () => {
       console.log("get answer");
       if (!pcRef.current) return;
       pcRef.current.setRemoteDescription(new RTCSessionDescription(sdp));
-      //console.log(sdp);
+      console.log(sdp);
     });
 
     socketRef.current.on(

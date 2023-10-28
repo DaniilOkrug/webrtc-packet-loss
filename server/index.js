@@ -16,20 +16,24 @@ let socketToRoom = {};
 const maximum = 2;
 
 io.on("connection", (socket) => {
-    socket.on("join_room", (data) => {
+    socket.on("join_room", async (data) => {
         if (users[data.room]) {
             const length = users[data.room].length;
             if (length === maximum) {
                 socket.to(socket.id).emit("room_full");
                 return;
             }
-            users[data.room].push({ id: socket.id });
+
+            const currentUser = users[data.room].find(el => el.id === socket.id);
+            if (!currentUser) {
+                users[data.room].push({ id: socket.id });
+            }
         } else {
             users[data.room] = [{ id: socket.id }];
         }
         socketToRoom[socket.id] = data.room;
 
-        socket.join(data.room);
+        await socket.join(data.room);
         console.log(`[${socketToRoom[socket.id]}]: ${socket.id} enter`);
 
         const usersInThisRoom = users[data.room].filter(
