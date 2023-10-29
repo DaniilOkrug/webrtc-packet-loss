@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { io } from "socket.io-client";
 
 const pc_config = {
@@ -31,6 +31,7 @@ const App = () => {
       if (!(pcRef.current && socketRef.current)) return;
       stream.getTracks().forEach((track) => {
         if (!pcRef.current) return;
+        console.log("Local tracks added");
         pcRef.current.addTrack(track, stream);
       });
       pcRef.current.onicecandidate = (e) => {
@@ -46,6 +47,7 @@ const App = () => {
       pcRef.current.ontrack = (ev) => {
         console.log("add remotetrack success", ev);
         if (remoteVideoRef.current) {
+          console.log("adding remotetrack to remoteVideoRef", ev);
           remoteVideoRef.current.srcObject = ev.streams[0];
         }
       };
@@ -129,9 +131,20 @@ const App = () => {
       }
       if (pcRef.current) {
         pcRef.current.close();
+        // pcRef.current.getStats()
       }
     };
   }, []);
+
+  // useEffect(() => {
+  //   const timer = setInterval(async () => {
+  //     if (pcRef) console.log(await pcRef.current?.getStats());
+  //   }, 2000);
+
+  //   return () => {
+  //     clearInterval(timer);
+  //   };
+  // }, []);
 
   return (
     <div>
