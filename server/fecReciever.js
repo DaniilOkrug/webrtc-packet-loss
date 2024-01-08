@@ -15,6 +15,7 @@ const metrics = {
 };
 
 server.on("message", (msg, rinfo) => {
+  console.log(rinfo);
   const packet = JSON.parse(msg);
 
   if (packet.header.type === 'media') {
