@@ -1,13 +1,13 @@
 const dgram = require("dgram");
 const server = dgram.createSocket("udp4");
 
-const FEC_PACKET_LOSS = 0.1;
+const FEC_PACKET_LOSS = 0.2;
 
 let expectedPacketCount = 0;
 let receivedPackets = {};
 let fecPacket;
 
-const metrics = {
+const  metrics = {
   mediaCount: 0,
   fecCount: 0,
   mediaSize: 0,
@@ -28,8 +28,14 @@ server.on("message", (msg, rinfo) => {
       console.log(`${packet.header.id}: ${packet.payload}`);
     } else {
       console.log(`${packet.header.id} потерян`);
+      server.send(Buffer.from(JSON.stringify(packet.header.id)), 41235, "localhost", (err) => {
+        if (err) {
+          console.error(err);
+          server.close();
+        }
+      });
     }
-  } else {
+  } else if (packet.header.type === 'fec') {
     metrics.fecCount++;
     metrics.fecSize += rinfo.size;
     console.log(`FEC: ${packet.header.protected}`);
@@ -48,7 +54,7 @@ server.on("message", (msg, rinfo) => {
       }
     }
 
-    // Если есть потерянный пакеты, то воссановим его
+    // Если есть потерянные пакеты, то воссановим его
     if (recoveryIds < packet.header.protected) {
       const lostPacket = Buffer.from(packet.payload.data);
       for (let i = 0; i < receivedPackets[recoveryIds[0]].length; i++) {

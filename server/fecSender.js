@@ -1,11 +1,13 @@
 const dgram = require("dgram");
-const { v4: uuid } = require("uuid");
-
 const server = dgram.createSocket("udp4");
 
-const FEC_PACKET_INTERVAL = 2; // Количество пакетов перед отправкой FEC пакета
+const FEC_PACKET_INTERVAL = 5; // Количество пакетов перед отправкой FEC пакета
 let messageCounter = 0;
+let simulationCounter = 0;
 let fecPacket = null;
+let networkReport = {
+  packet_loss: 0
+};
 
 function sendFecPacket() {
   server.send(Buffer.from(JSON.stringify(fecPacket)), 41234, "localhost", (err) => {
@@ -23,12 +25,13 @@ function sendFecPacket() {
 function sendPacket(message) {
   const packet = {
     header: {
-      id: uuid(),
+      id: simulationCounter,
       type: 'media'
     },
+    networkReport,
     payload: message,
   }
-  
+
   const messageBuffer = Buffer.from(JSON.stringify(packet));
 
   // FEC - XOR
@@ -38,6 +41,7 @@ function sendPacket(message) {
         type: 'fec',
         protected: [packet.header.id],
       },
+      networkReport,
       payload: messageBuffer,
     }
   } else {
@@ -66,7 +70,6 @@ function sendPacket(message) {
 
 // Симуляция
 const SIMULATION_REQ_AMOUNT = 100;
-let simulationCounter = 0;
 const simulationTimer = setInterval(() => {
   const message = Math.random() * 100;
   sendPacket(message.toString());
@@ -78,3 +81,24 @@ const simulationTimer = setInterval(() => {
     return;
   }
 }, 100);
+
+/* Формирование репорта сети */
+const reportsListenerServer = dgram.createSocket("udp4");
+
+let lostPackets = 0;
+
+reportsListenerServer.on("listening", () => {
+  const address = reportsListenerServer.address();
+  console.log(`Сервер слушает ${address.address}:${address.port}`);
+});
+reportsListenerServer.bind(41235);
+
+
+reportsListenerServer.on("message", (msg, rinfo) => {
+  const lostId = +JSON.parse(msg);
+  lostPackets++;
+  
+  networkReport.packet_loss = lostPackets / lostId;
+
+  console.log(networkReport);
+});
