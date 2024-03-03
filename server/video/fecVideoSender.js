@@ -65,3 +65,23 @@ function processFrames() {
         processFrames();
     });
 }
+
+const reportsListenerServer = dgram.createSocket("udp4");
+
+let lostPackets = 0;
+
+reportsListenerServer.on("listening", () => {
+  const address = reportsListenerServer.address();
+  console.log(`reportsListenerServer слушает ${address.address}:${address.port}`);
+});
+reportsListenerServer.bind(41235);
+
+
+reportsListenerServer.on("message", (msg, rinfo) => {
+  const lostId = +JSON.parse(msg);
+  lostPackets++;
+
+  networkReport.packet_loss = lostPackets / lostId;
+
+  console.log(networkReport);
+});

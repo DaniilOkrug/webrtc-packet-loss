@@ -9,8 +9,6 @@ class FecSenderManager {
     constructor() { }
 
     /**
-     * 
-     * 
      * @param {Buffer} dataPacket 
      * @returns {Buffer}
      */
