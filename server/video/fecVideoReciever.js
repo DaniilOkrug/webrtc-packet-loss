@@ -1,3 +1,7 @@
+require('dotenv').config({
+    path: '../.env'
+})
+
 const dgram = require("dgram");
 const { FecReceiverManager } = require("./FecReceiverManager");
 const { Metrics } = require("./Metrics");
@@ -11,23 +15,34 @@ server.on("message", (msg, rinfo) => {
     // console.log(rinfo);
     const packet = JSON.parse(msg);
 
-    if (Math.random() < 0.2) return console.log(`Lost ${packet.header.id}`);
+    // Временное решение
+    if (Math.random() < 0.1) {
+        if (packet.header.type === 'media') {
+            metrics.packetsLost++;
+        }
+
+        return console.log(`Lost ${packet.header.id}`);
+    }
 
     if (packet.header.type === 'media') {
         // console.log(`${packet.header.type} : ${packet.header.id}`);
-
-        fecReceiverManager.addPacket(packet);
+        fecReceiverManager.addPacket(packet, rinfo);
     } else if (packet.header.type === 'fec') {
         // console.log(`${packet.header.type} : ${packet.header.protected}`);
-        fecReceiverManager.recover(packet);
+        fecReceiverManager.recover(packet, rinfo);
     }
 });
 
-process.on('SIGINT', function () {
-    console.log("Caught interrupt signal");
 
-    
-    
+/**
+ * Show metrics at KeyboardInterrupt
+ */
+process.on('SIGINT', function () {
+    console.log("\n--Caught interrupt signal--\n");
+
+    metrics.packetsCounter += metrics.packetsLost; // Add lost packets to received packets
+    metrics.print();
+
     process.exit();
 });
 

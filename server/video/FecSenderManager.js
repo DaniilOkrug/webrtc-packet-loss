@@ -1,7 +1,7 @@
 const { NetworkReport } = require("./NetworkReport");
 
 class FecSenderManager {
-    interval = 2;
+    interval = 4;
     packet = null;
     ready = false;
     packetCounter = 0;
