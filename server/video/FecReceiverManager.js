@@ -46,7 +46,7 @@ class FecReceiverManager {
             {
                 type: packet.header.type, 
                 time: Date.now(), 
-                size: rinfo.size
+                size: packet.header.type === 'fec' ? Buffer.from(packet.payload).length : rinfo.size
             }
         ])
     }
