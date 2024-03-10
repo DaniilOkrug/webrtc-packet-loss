@@ -11,13 +11,11 @@ class PacketsManager {
      * @returns {Buffer}
      */
     toPacket(data) {
-        const networkReport = new NetworkReport(0);
         const packet = {
             header: {
               id: this.packetId,
               type: 'media'
             },
-            networkReport: networkReport.get(),
             payload: data,
         }
 

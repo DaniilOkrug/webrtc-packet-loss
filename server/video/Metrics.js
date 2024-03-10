@@ -9,7 +9,11 @@ class Metrics {
     }
 
     getLossFraction() {
-        return this.packetsLost / this.packetsCounter;
+        return this.packetsLost / (this.packetsCounter + this.packetsLost);
+    }
+
+    getRecoveryRate() {
+        return this.packetsRecovered / this.packetsLost;
     }
 
     print() {

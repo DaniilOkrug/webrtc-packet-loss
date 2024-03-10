@@ -1,12 +1,22 @@
-const { NetworkReport } = require("./NetworkReport");
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 class FecSenderManager {
-    interval = 4;
+    interval = 14;
     packet = null;
     ready = false;
     packetCounter = 0;
 
-    constructor() { }
+    constructor() {
+        this.reportCsv = createCsvWriter({
+            path: process.env.CSV_SENDER_REPORT_PATH,
+            header: [
+                {id: 'time', title: 'Time'},
+                {id: 'packet_loss', title: 'Packet loss'},
+                {id: 'fec_rate', title: 'FEC Interval'},
+                {id: 'recovery_rate', title: 'Recovery Rate'}
+            ]
+        })
+    }
 
     /**
      * @param {Buffer} dataPacket 
@@ -14,7 +24,6 @@ class FecSenderManager {
      */
     transform(dataPacket) {
         const parsedPacket = JSON.parse(dataPacket);
-        const networkReport = new NetworkReport(0);
 
         if (!this.packet) {
             this.packet = {
@@ -22,7 +31,6 @@ class FecSenderManager {
                     type: 'fec',
                     protected: [parsedPacket.header.id],
                 },
-                networkReport: networkReport.get(),
                 payload: JSON.parse(JSON.stringify(dataPacket)),
             }
         } else {
@@ -35,6 +43,29 @@ class FecSenderManager {
         this.packetCounter++;
 
         return Buffer.from(JSON.stringify(this.packet));
+    }
+
+    adaptFecInterval(networkReport) {
+        const minFecInterval = 2;
+        const maxFecInsterval = 14;
+
+        const packetLossThreshold = 0.2;
+        
+        const lossRateFactor = Math.min(1, networkReport.packet_loss / packetLossThreshold);
+
+        const adaptiveFactor = lossRateFactor;
+
+        this.interval = Math.round(maxFecInsterval - adaptiveFactor * (maxFecInsterval - minFecInterval));
+
+        console.log('Interval:', this.interval);
+        this.reportCsv.writeRecords([
+            {
+                packet_loss: networkReport.packet_loss, 
+                time: Date.now(), 
+                fec_rate: this.interval,
+                recovery_rate: networkReport.recovery_rate
+            }
+        ]);
     }
 }
 

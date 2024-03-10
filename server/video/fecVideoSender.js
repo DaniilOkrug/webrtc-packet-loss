@@ -1,3 +1,7 @@
+require('dotenv').config({
+    path: '../.env'
+})
+
 const ffmpeg = require('fluent-ffmpeg');
 const dgram = require("dgram");
 const { PacketsManager } = require('./PacketsManager');
@@ -7,8 +11,8 @@ const server = dgram.createSocket("udp6");
 const packetManager = new PacketsManager();
 const fecManager = new FecSenderManager();
 
-const packetsQueue = [];
-let packetsAmount = 0;
+const framesQueue = [];
+let framesAmount = 0;
 
 const PORT = 41234;
 
@@ -28,29 +32,41 @@ const videoStream = ffmpeg('./test.mp4')
     })
     .on('end', function () {
         console.log('Finished processing');
-        packetsAmount = packetsQueue.length;
+        framesAmount = framesQueue.length;
         processFrames();
     }).pipe();
 
 videoStream.on('data', (frame) => {
-    const packet = packetManager.toPacket(frame);
-    const fecPacket = fecManager.transform(packet);
+    // const packet = packetManager.toPacket(frame);
+    // const fecPacket = fecManager.transform(packet);
 
-    packetsQueue.push(packet);
+    // packetsQueue.push(packet);
 
-    if (fecManager.packetCounter === fecManager.interval) {
-        packetsQueue.push(fecPacket);
+    // if (fecManager.packetCounter === fecManager.interval) {
+    //     packetsQueue.push(fecPacket);
 
-        fecManager.packet = null;
-        fecManager.packetCounter = 0;
-    }
+    //     fecManager.packet = null;
+    //     fecManager.packetCounter = 0;
+    // }
+    framesQueue.push(frame);
 });
 
 function processFrames() {
-    const packet = packetsQueue.shift();
+    const frame = framesQueue.shift();
+    const packet = packetManager.toPacket(frame); 
+    const fecPacket = fecManager.transform(packet);
 
-    // console.log(JSON.parse(packet).header.id);
+    if (fecManager.packetCounter >= fecManager.interval) {
+        fecManager.packet = null;
+        fecManager.packetCounter = 0;
 
+        server.send(fecPacket, PORT, "localhost", (err) => {
+            if (err) {
+                console.error(err);
+                server.close();
+            }
+        });
+    }
 
     server.send(packet, PORT, "localhost", (err) => {
         if (err) {
@@ -58,17 +74,15 @@ function processFrames() {
             server.close();
         }
 
-        packetsAmount--;
+        framesAmount--;
 
-        if (packetsAmount === 0) return server.close();
+        if (framesAmount === 0) return server.close();
 
         processFrames();
     });
 }
 
 const reportsListenerServer = dgram.createSocket("udp6");
-
-let lostPackets = 0;
 
 reportsListenerServer.on("listening", () => {
   const address = reportsListenerServer.address();
@@ -81,4 +95,5 @@ reportsListenerServer.on("message", (msg, rinfo) => {
   const networkReport = JSON.parse(msg);
 
   console.log(networkReport);
+  fecManager.adaptFecInterval(networkReport);
 });

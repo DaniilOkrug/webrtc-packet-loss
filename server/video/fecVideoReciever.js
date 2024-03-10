@@ -18,7 +18,7 @@ server.on("message", (msg, rinfo) => {
     const packet = JSON.parse(msg);
 
     // Временное решение
-    if (Math.random() < 0.1) {
+    if (Math.random() < 0.15) {
         if (packet.header.type === 'media') {
             metrics.packetsLost++;
         }
@@ -35,7 +35,8 @@ server.on("message", (msg, rinfo) => {
     }
 
     server.send(Buffer.from(JSON.stringify({
-        packet_loss: metrics.getLossFraction()
+        packet_loss: metrics.getLossFraction(),
+        recovery_rate: metrics.getRecoveryRate()
     })), 41235, "localhost", (err) => {
         if (err) {
           console.error(err);
