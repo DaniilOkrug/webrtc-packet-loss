@@ -8,6 +8,10 @@ class Metrics {
         this.initTime = Date.now();
     }
 
+    getLossFraction() {
+        return this.packetsLost / this.packetsCounter;
+    }
+
     print() {
         console.log(`Started at: ${new Date(this.initTime).toLocaleString('en')}`);
         console.log(`Finished at: ${new Date().toLocaleString('en')}\n`);

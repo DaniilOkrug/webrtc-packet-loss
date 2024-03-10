@@ -49,7 +49,7 @@ videoStream.on('data', (frame) => {
 function processFrames() {
     const packet = packetsQueue.shift();
 
-    console.log(JSON.parse(packet).header.id);
+    // console.log(JSON.parse(packet).header.id);
 
 
     server.send(packet, PORT, "localhost", (err) => {
@@ -66,7 +66,7 @@ function processFrames() {
     });
 }
 
-const reportsListenerServer = dgram.createSocket("udp4");
+const reportsListenerServer = dgram.createSocket("udp6");
 
 let lostPackets = 0;
 
@@ -78,10 +78,7 @@ reportsListenerServer.bind(41235);
 
 
 reportsListenerServer.on("message", (msg, rinfo) => {
-  const lostId = +JSON.parse(msg);
-  lostPackets++;
-
-  networkReport.packet_loss = lostPackets / lostId;
+  const networkReport = JSON.parse(msg);
 
   console.log(networkReport);
 });

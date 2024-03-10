@@ -5,10 +5,12 @@ require('dotenv').config({
 const dgram = require("dgram");
 const { FecReceiverManager } = require("./FecReceiverManager");
 const { Metrics } = require("./Metrics");
+const { NetworkReport } = require('./NetworkReport');
 
 const server = dgram.createSocket("udp6");
 
 const metrics = new Metrics();
+const networkReport = new NetworkReport();
 const fecReceiverManager = new FecReceiverManager(metrics);
 
 server.on("message", (msg, rinfo) => {
@@ -21,7 +23,7 @@ server.on("message", (msg, rinfo) => {
             metrics.packetsLost++;
         }
 
-        return console.log(`Lost ${packet.header.id}`);
+        return //console.log(`Lost ${packet.header.id}`);
     }
 
     if (packet.header.type === 'media') {
@@ -31,6 +33,15 @@ server.on("message", (msg, rinfo) => {
         // console.log(`${packet.header.type} : ${packet.header.protected}`);
         fecReceiverManager.recover(packet, rinfo);
     }
+
+    server.send(Buffer.from(JSON.stringify({
+        packet_loss: metrics.getLossFraction()
+    })), 41235, "localhost", (err) => {
+        if (err) {
+          console.error(err);
+          server.close();
+        }
+    });
 });
 
 

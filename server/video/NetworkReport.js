@@ -1,13 +1,14 @@
 class NetworkReport {
-    packetLoss;
+    packetsAmount = 0;
+    packetsLost = 0;
+    bandwidth = 0;
 
-    constructor(packetLoss) {
-        this.packetLoss = packetLoss;
-    }
+    constructor() {}
 
     get() {
         return {
-            packetLoss: this.packetLoss,
+            packetLoss: this.packetsLost === 0 ? 0 : this.packetsLost / this.packetsAmount,
+            bandwidth: this.bandwidth,
         }
     }
 }

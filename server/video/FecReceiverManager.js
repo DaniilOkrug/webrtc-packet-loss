@@ -21,6 +21,7 @@ class FecReceiverManager {
 
         this.receivedPackets.set(packet.header.id, packet);
         this.metricsManager.packetsCounter++;
+        console.log(this.metricsManager.getLossFraction());
     }
 
     recover(fecPacket, rinfo) {
@@ -36,7 +37,7 @@ class FecReceiverManager {
 
         // Possible recover only 1 packet from whole set of packets
         if (lostPackets.length === 1) {
-            console.log(`Recovered packet: ${lostPackets[0]}`);
+            // console.log(`Recovered packet: ${lostPackets[0]}`);
             this.metricsManager.packetsRecovered++;
         }
     }
