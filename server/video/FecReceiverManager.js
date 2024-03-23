@@ -34,7 +34,7 @@ class FecReceiverManager {
                 lostPackets.push(protectedId);
             }
         }
-
+        
         // Possible recover only 1 packet from whole set of packets
         if (lostPackets.length === 1) {
             // console.log(`Recovered packet: ${lostPackets[0]}`);

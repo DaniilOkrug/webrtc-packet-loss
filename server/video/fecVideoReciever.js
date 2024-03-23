@@ -14,11 +14,10 @@ const networkReport = new NetworkReport();
 const fecReceiverManager = new FecReceiverManager(metrics);
 
 server.on("message", (msg, rinfo) => {
-    // console.log(rinfo);
     const packet = JSON.parse(msg);
 
     // Временное решение
-    if (Math.random() < 0.15) {
+    if (Math.random() < 0.2) {
         if (packet.type === 1) {
             metrics.packetsLost++;
         }

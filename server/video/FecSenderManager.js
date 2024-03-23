@@ -22,7 +22,7 @@ class FecSenderManager {
 
     /**
      * @param {Buffer} dataPacket 
-     * @returns {Buffer}
+     * @returns {Buffer | null}
      */
     transform(dataPacket) {
         const parsedPacket = JSON.parse(dataPacket);
@@ -31,7 +31,8 @@ class FecSenderManager {
             this.packet = {
                 type: 2, // FEC type
                 protected: [parsedPacket.id],
-                payload: JSON.parse(JSON.stringify(dataPacket)),
+                // payload: JSON.parse(JSON.stringify(dataPacket)),
+                payload: Buffer.alloc(Buffer.from(parsedPacket.payload).length)
             }
         } else {
             this.packet.protected = [...this.packet.protected, parsedPacket.id];
@@ -41,8 +42,10 @@ class FecSenderManager {
         }
 
         this.packetCounter++;
+        // console.log('Interval:', this.interval, this.packetCounter);
 
-        return Buffer.from(JSON.stringify(this.packet));
+
+        return this.packetCounter >= this.interval ? Buffer.from(JSON.stringify(this.packet)) : null;
     }
 
     /**
