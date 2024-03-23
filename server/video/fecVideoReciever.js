@@ -19,18 +19,18 @@ server.on("message", (msg, rinfo) => {
 
     // Временное решение
     if (Math.random() < 0.15) {
-        if (packet.header.type === 'media') {
+        if (packet.type === 1) {
             metrics.packetsLost++;
         }
 
-        return //console.log(`Lost ${packet.header.id}`);
+        return //console.log(`Lost ${packet.id}`);
     }
 
-    if (packet.header.type === 'media') {
-        // console.log(`${packet.header.type} : ${packet.header.id}`);
+    if (packet.type === 1) {
+        // console.log(`${packet.type} : ${packet.id}`);
         fecReceiverManager.addPacket(packet, rinfo);
-    } else if (packet.header.type === 'fec') {
-        // console.log(`${packet.header.type} : ${packet.header.protected}`);
+    } else if (packet.type === 2) {
+        // console.log(`${packet.type} : ${packet.protected}`);
         fecReceiverManager.recover(packet, rinfo);
     }
 
@@ -39,8 +39,8 @@ server.on("message", (msg, rinfo) => {
         recovery_rate: metrics.getRecoveryRate()
     })), 41235, "localhost", (err) => {
         if (err) {
-          console.error(err);
-          server.close();
+            console.error(err);
+            server.close();
         }
     });
 });
@@ -58,6 +58,10 @@ process.on('SIGINT', function () {
     process.exit();
 });
 
+
+/**
+ * 
+ */
 server.on("listening", () => {
     const address = server.address();
     console.log(`Server listens ${address.address}:${address.port}`);

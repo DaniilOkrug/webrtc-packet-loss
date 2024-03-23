@@ -17,7 +17,7 @@ let framesAmount = 0;
 const PORT = 41234;
 
 const videoStream = ffmpeg('./test.mp4')
-    .videoBitrate(1)
+    .videoBitrate(10)
     .videoCodec('libx264')
     .outputOptions('-preset ultrafast')
     .outputOptions('-tune zerolatency')
@@ -53,47 +53,53 @@ videoStream.on('data', (frame) => {
 
 function processFrames() {
     const frame = framesQueue.shift();
-    const packet = packetManager.toPacket(frame); 
-    const fecPacket = fecManager.transform(packet);
+    const packets = packetManager.toPackets(frame);
 
-    if (fecManager.packetCounter >= fecManager.interval) {
-        fecManager.packet = null;
-        fecManager.packetCounter = 0;
+    for (const packet of packets) {
+        const fecPacket = fecManager.transform(packet);
 
-        server.send(fecPacket, PORT, "localhost", (err) => {
+        server.send(packet, PORT, "localhost", (err) => {
             if (err) {
+                console.log('Errors packet size:', packet.byteLength, packet.length);
                 console.error(err);
                 server.close();
             }
+
+            framesAmount--;
+
+            if (framesAmount === 0) return server.close();
+
+            processFrames();
         });
-    }
 
-    server.send(packet, PORT, "localhost", (err) => {
-        if (err) {
-            console.error(err);
-            server.close();
+
+        if (fecManager.packetCounter >= fecManager.interval) {
+            fecManager.packet = null;
+            fecManager.packetCounter = 0;
+
+            server.send(fecPacket, PORT, "localhost", (err) => {
+                if (err) {
+                    console.log('Errors packet size:', packet.byteLength, packet.length);
+                    console.error(err);
+                    server.close();
+                }
+            });
         }
-
-        framesAmount--;
-
-        if (framesAmount === 0) return server.close();
-
-        processFrames();
-    });
+    }
 }
 
 const reportsListenerServer = dgram.createSocket("udp6");
 
 reportsListenerServer.on("listening", () => {
-  const address = reportsListenerServer.address();
-  console.log(`reportsListenerServer слушает ${address.address}:${address.port}`);
+    const address = reportsListenerServer.address();
+    console.log(`reportsListenerServer слушает ${address.address}:${address.port}`);
 });
 reportsListenerServer.bind(41235);
 
 
 reportsListenerServer.on("message", (msg, rinfo) => {
-  const networkReport = JSON.parse(msg);
+    const networkReport = JSON.parse(msg);
 
-  console.log(networkReport);
-  fecManager.adaptFecInterval(networkReport);
+    console.log(networkReport);
+    fecManager.adaptFecInterval(networkReport);
 });

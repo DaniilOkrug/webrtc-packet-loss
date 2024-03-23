@@ -9,9 +9,9 @@ class FecReceiverManager {
         this.reportCsv = createCsvWriter({
             path: process.env.CSV_REPORT_PATH,
             header: [
-                {id: 'type', title: 'Type'},
-                {id: 'time', title: 'Time'},
-                {id: 'size', title: 'Size'}
+                { id: 'type', title: 'Type' },
+                { id: 'time', title: 'Time' },
+                { id: 'size', title: 'Size' }
             ]
         })
     }
@@ -19,7 +19,7 @@ class FecReceiverManager {
     addPacket(packet, rinfo) {
         this.writeToReport(packet, rinfo);
 
-        this.receivedPackets.set(packet.header.id, packet);
+        this.receivedPackets.set(packet.id, packet);
         this.metricsManager.packetsCounter++;
         console.log(this.metricsManager.getLossFraction());
     }
@@ -29,7 +29,7 @@ class FecReceiverManager {
 
         const lostPackets = [];
 
-        for(const protectedId of fecPacket.header.protected) {
+        for (const protectedId of fecPacket.protected) {
             if (!this.receivedPackets.get(protectedId)) {
                 lostPackets.push(protectedId);
             }
@@ -45,9 +45,9 @@ class FecReceiverManager {
     writeToReport(packet, rinfo) {
         this.reportCsv.writeRecords([
             {
-                type: packet.header.type, 
-                time: Date.now(), 
-                size: packet.header.type === 'fec' ? Buffer.from(packet.payload).length : rinfo.size
+                type: packet.type,
+                time: Date.now(),
+                size: packet.type === 2 ? Buffer.from(packet.payload).length : rinfo.size
             }
         ])
     }
