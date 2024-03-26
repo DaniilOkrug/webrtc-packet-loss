@@ -13,8 +13,9 @@ const reportsListenerServer = dgram.createSocket("udp6");
 const packetManager = new PacketsManager();
 const fecManager = new FecSenderManager();
 
-const framesQueue = [];
-let framesAmount = 0;
+// const framesQueue = [];
+// let framesAmount = 0;
+let isVideoParsingFinished = false;
 
 let sendingRate = 100000; // 100mbps default
 const sendingRateList = [sendingRate];
@@ -37,12 +38,14 @@ const videoStream = ffmpeg('./test.mp4')
     })
     .on('end', function () {
         console.log('Finished processing');
-        framesAmount = framesQueue.length;
-        processFrames();
+        // framesAmount = framesQueue.length;
+        isVideoParsingFinished = true;
+        // processFrames();
     }).pipe();
 
 videoStream.on('data', (frame) => {
-    framesQueue.push(frame);
+    // framesQueue.push(frame);
+    processFrames(frame)
 });
 
 async function sendPacketsWithFEC(packets) {
@@ -90,8 +93,9 @@ function sendPacket(packet, fecPacket) {
     });
 }
 
-async function processFrames() {
-    const frame = framesQueue.shift();
+async function processFrames(frame) {
+    // console.log(Buffer.byteLength(frame));
+    // const frame = framesQueue.shift();
     const packets = packetManager.toPackets(frame);
 
     // console.log(framesQueue.length);
@@ -104,15 +108,15 @@ async function processFrames() {
         return;
     }
 
-    framesAmount--;
+    // framesAmount--;
 
-    if (framesAmount === 0) {
+    if (isVideoParsingFinished) {
         server.close();
         reportsListenerServer.close();
         return;
     }
 
-    processFrames();
+    // processFrames();
 }
 
 reportsListenerServer.on("listening", () => {
@@ -125,13 +129,12 @@ const networkReportList = [];
 reportsListenerServer.on("message", (msg, _rinfo) => {
     const networkReport = JSON.parse(msg);
 
-    console.log(networkReport);
-    fecManager.adaptFecInterval(networkReport);
+    // console.log(networkReport);
 
     if (networkReportList.length === 0) return networkReportList.push(networkReport);
 
     if (networkReport.packet_loss > 0.1) {
-        //add
+        sendingRate = sendingRateList[sendingRateList.length - 1] * (1 - 0.5 * networkReport.packet_loss);
     } else if (networkReport.packet_loss < 0.02) {
         sendingRate = 1.05 * sendingRateList[sendingRateList.length - 1]
         return;
@@ -141,4 +144,8 @@ reportsListenerServer.on("message", (msg, _rinfo) => {
 
     sendingRateList.push(sendingRate);
     networkReportList.push(networkReport)
+
+    console.log(sendingRate);
+
+    fecManager.adaptFecInterval(networkReport, sendingRate);
 });

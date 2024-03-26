@@ -3,8 +3,9 @@ class NetworkReport {
     packetsAmount = 0;
     packetsLost = 0;
     totalBandwidth = 0;
+    totalMediaBandwidth = 0; // Bandwidth of media packets
 
-    constructor() {}
+    constructor() { }
 
     get() {
         const elapsedTime = Date.now() - this.initTime;
@@ -12,7 +13,8 @@ class NetworkReport {
 
         return {
             packet_loss: this.packetsLost === 0 ? 0 : this.packetsLost / (this.packetsAmount + this.packetsLost),
-            bandwidth: this.totalBandwidth / Math.max((elapsedTime / 1000), 1)
+            bandwidth: this.totalBandwidth / Math.max((elapsedTime / 1000), 1),
+            bandwidth_media: this.totalMediaBandwidth / Math.max((elapsedTime / 1000), 1)
         }
     }
 }

@@ -17,7 +17,7 @@ server.on("message", (msg, rinfo) => {
     const packet = JSON.parse(msg);
 
     // Временное решение
-    if (Math.random() < 0.1) {
+    if (Math.random() < 0.13) {
         if (packet.type === 1) {
             metrics.packetsLost++;
             networkReport.packetsLost++;
@@ -26,15 +26,17 @@ server.on("message", (msg, rinfo) => {
         return //console.log(`Lost ${packet.id}`);
     }
 
-    networkReport.totalBandwidth += rinfo.size;
     if (!networkReport.initTime) networkReport.initTime = Date.now();
 
     fecReceiverManager.metricsManager.packetsCounter++;
     networkReport.packetsAmount++;
 
     if (packet.type === 1) {
+        networkReport.totalBandwidth += rinfo.size;
+        networkReport.totalMediaBandwidth += rinfo.size;
         fecReceiverManager.addPacket(packet, rinfo);
     } else if (packet.type === 2) {
+        networkReport.totalBandwidth += Buffer.from(packet.payload).length;
         fecReceiverManager.recover(packet, rinfo);
     }
 });

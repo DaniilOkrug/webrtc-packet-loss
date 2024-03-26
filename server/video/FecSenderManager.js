@@ -16,7 +16,9 @@ class FecSenderManager {
                 { id: 'packet_loss', title: 'Packet loss' },
                 { id: 'fec_rate', title: 'FEC Interval' },
                 { id: 'recovery_rate', title: 'Recovery Rate' },
-                { id: 'bandwidth', title: 'Bandwidth' }
+                { id: 'bandwidth', title: 'Bandwidth' },
+                { id: 'bandwidth_media', title: 'Bandwidth Media' },
+                { id: 'sendingRate', title: 'Sending Rate' }
             ]
         })
     }
@@ -38,7 +40,7 @@ class FecSenderManager {
         } else {
             this.packet.protected = [...this.packet.protected, parsedPacket.id];
 
-            if (this.packet.payload.length < dataPacket.length ) {
+            if (this.packet.payload.length < dataPacket.length) {
                 this.packet.payload = Buffer.alloc(dataPacket.length);
             }
 
@@ -55,7 +57,7 @@ class FecSenderManager {
         return this.packetCounter >= this.interval ? Buffer.from(JSON.stringify(this.packet)) : null;
     }
 
-    adaptFecInterval(networkReport) {
+    adaptFecInterval(networkReport, sendingRate) {
         const minFecInterval = 2;
         const maxFecInterval = 14;
 
@@ -75,6 +77,8 @@ class FecSenderManager {
                 fec_rate: this.interval,
                 recovery_rate: networkReport.recovery_rate,
                 bandwidth: networkReport.bandwidth,
+                bandwidth_media: networkReport.bandwidth_media,
+                sendingRate,
             }
         ]);
     }

@@ -37,8 +37,8 @@ class PacketsManager {
         const packets = [];
         let offset = 0;
 
-        while (offset < data.length) {
-            const remaining = data.length - offset;
+        while (offset < Buffer.byteLength(data)) {
+            const remaining = Buffer.byteLength(data) - offset;
             const packetSize = Math.min(maxPacketSize, remaining);
             const packetData = data.slice(offset, offset + packetSize);
             packets.push(packetData);
