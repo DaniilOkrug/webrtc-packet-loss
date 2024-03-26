@@ -15,7 +15,8 @@ class FecSenderManager {
                 { id: 'time', title: 'Time' },
                 { id: 'packet_loss', title: 'Packet loss' },
                 { id: 'fec_rate', title: 'FEC Interval' },
-                { id: 'recovery_rate', title: 'Recovery Rate' }
+                { id: 'recovery_rate', title: 'Recovery Rate' },
+                { id: 'bandwidth', title: 'Bandwidth' }
             ]
         })
     }
@@ -32,11 +33,17 @@ class FecSenderManager {
                 type: 2, // FEC type
                 protected: [parsedPacket.id],
                 // payload: JSON.parse(JSON.stringify(dataPacket)),
-                payload: Buffer.alloc(Buffer.from(parsedPacket.payload).length)
+                payload: Buffer.alloc(dataPacket.length)
             }
         } else {
             this.packet.protected = [...this.packet.protected, parsedPacket.id];
+
+            if (this.packet.payload.length < dataPacket.length ) {
+                this.packet.payload = Buffer.alloc(dataPacket.length);
+            }
+
             for (let i = 0; i < dataPacket.length; i++) {
+
                 this.packet.payload[i] = this.packet.payload[i] ^ dataPacket[i];
             }
         }
@@ -48,13 +55,9 @@ class FecSenderManager {
         return this.packetCounter >= this.interval ? Buffer.from(JSON.stringify(this.packet)) : null;
     }
 
-    /**
-     * 
-     * @param {NetworkReport} networkReport 
-     */
     adaptFecInterval(networkReport) {
         const minFecInterval = 2;
-        const maxFecInsterval = 14;
+        const maxFecInterval = 14;
 
         const packetLossThreshold = 0.1;
 
@@ -62,15 +65,16 @@ class FecSenderManager {
 
         const adaptiveFactor = lossRateFactor;
 
-        this.interval = Math.round(maxFecInsterval - adaptiveFactor * (maxFecInsterval - minFecInterval));
+        this.interval = Math.round(maxFecInterval - adaptiveFactor * (maxFecInterval - minFecInterval));
 
-        console.log('Interval:', this.interval);
+        // console.log('Interval:', this.interval);
         this.reportCsv.writeRecords([
             {
                 packet_loss: networkReport.packet_loss,
                 time: Date.now(),
                 fec_rate: this.interval,
-                recovery_rate: networkReport.recovery_rate
+                recovery_rate: networkReport.recovery_rate,
+                bandwidth: networkReport.bandwidth,
             }
         ]);
     }

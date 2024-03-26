@@ -17,24 +17,31 @@ server.on("message", (msg, rinfo) => {
     const packet = JSON.parse(msg);
 
     // Временное решение
-    if (Math.random() < 0.2) {
+    if (Math.random() < 0.1) {
         if (packet.type === 1) {
             metrics.packetsLost++;
+            networkReport.packetsLost++;
         }
 
         return //console.log(`Lost ${packet.id}`);
     }
 
+    networkReport.totalBandwidth += rinfo.size;
+    if (!networkReport.initTime) networkReport.initTime = Date.now();
+
+    fecReceiverManager.metricsManager.packetsCounter++;
+    networkReport.packetsAmount++;
+
     if (packet.type === 1) {
-        // console.log(`${packet.type} : ${packet.id}`);
         fecReceiverManager.addPacket(packet, rinfo);
     } else if (packet.type === 2) {
-        // console.log(`${packet.type} : ${packet.protected}`);
         fecReceiverManager.recover(packet, rinfo);
     }
+});
 
+setInterval(() => {
     server.send(Buffer.from(JSON.stringify({
-        packet_loss: metrics.getLossFraction(),
+        ...networkReport.get(),
         recovery_rate: metrics.getRecoveryRate()
     })), 41235, "localhost", (err) => {
         if (err) {
@@ -42,7 +49,7 @@ server.on("message", (msg, rinfo) => {
             server.close();
         }
     });
-});
+}, 1000);
 
 
 /**
@@ -57,10 +64,6 @@ process.on('SIGINT', function () {
     process.exit();
 });
 
-
-/**
- * 
- */
 server.on("listening", () => {
     const address = server.address();
     console.log(`Server listens ${address.address}:${address.port}`);

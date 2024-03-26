@@ -20,7 +20,6 @@ class FecReceiverManager {
         this.writeToReport(packet, rinfo);
 
         this.receivedPackets.set(packet.id, packet);
-        this.metricsManager.packetsCounter++;
         console.log(this.metricsManager.getLossFraction());
     }
 

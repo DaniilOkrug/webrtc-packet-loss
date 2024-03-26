@@ -69,7 +69,7 @@ function sendPacket(packet, fecPacket) {
                 console.log('Packet error size:', packet.byteLength);
                 reject(err);
             } else {
-                console.log('Packet sent:', packet.byteLength);
+                // console.log('Packet sent:', packet.byteLength);
                 resolve();
             }
         });
@@ -82,7 +82,7 @@ function sendPacket(packet, fecPacket) {
                     reject(err);
                     // resolve();
                 } else {
-                    console.log('FEC Packet sent:', fecPacket.byteLength);
+                    // console.log('FEC Packet sent:', fecPacket.byteLength);
                     resolve();
                 }
             });
@@ -93,6 +93,8 @@ function sendPacket(packet, fecPacket) {
 async function processFrames() {
     const frame = framesQueue.shift();
     const packets = packetManager.toPackets(frame);
+
+    // console.log(framesQueue.length);
 
     try {
         await sendPacketsWithFEC(packets);
@@ -129,7 +131,7 @@ reportsListenerServer.on("message", (msg, _rinfo) => {
     if (networkReportList.length === 0) return networkReportList.push(networkReport);
 
     if (networkReport.packet_loss > 0.1) {
-
+        //add
     } else if (networkReport.packet_loss < 0.02) {
         sendingRate = 1.05 * sendingRateList[sendingRateList.length - 1]
         return;
