@@ -45,7 +45,6 @@ class FecSenderManager {
             }
 
             for (let i = 0; i < dataPacket.length; i++) {
-
                 this.packet.payload[i] = this.packet.payload[i] ^ dataPacket[i];
             }
         }

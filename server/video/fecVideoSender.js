@@ -17,7 +17,7 @@ const fecManager = new FecSenderManager();
 // let framesAmount = 0;
 let isVideoParsingFinished = false;
 
-let sendingRate = 100000; // 100mbps default
+let sendingRate = 2983; // 42000 is max; 2983 is actual
 const sendingRateList = [sendingRate];
 
 const PORT = 41234;
@@ -25,12 +25,16 @@ const PORT = 41234;
 const videoStream = ffmpeg('./test.mp4')
     .videoBitrate(sendingRate)
     .videoCodec('libx264')
+    .inputOptions('-stream_loop 10')
     .outputOptions('-preset ultrafast')
     .outputOptions('-tune zerolatency')
     .outputOptions('-pix_fmt yuv420p')
     .outputOptions('-r 30')
-    .outputOptions('-s 540x380')
+    .outputOptions('-s 1280x720')
     .outputFormat('mpegts')
+    .on('codecData', function (data) {
+        console.log(data);
+    })
     .on('error', (err, stdout, stderr) => {
         console.log('Error:', err.message);
         console.log('ffmpeg stdout:', stdout);
@@ -129,7 +133,7 @@ const networkReportList = [];
 reportsListenerServer.on("message", (msg, _rinfo) => {
     const networkReport = JSON.parse(msg);
 
-    // console.log(networkReport);
+    console.log(networkReport);
 
     if (networkReportList.length === 0) return networkReportList.push(networkReport);
 
@@ -137,7 +141,6 @@ reportsListenerServer.on("message", (msg, _rinfo) => {
         sendingRate = sendingRateList[sendingRateList.length - 1] * (1 - 0.5 * networkReport.packet_loss);
     } else if (networkReport.packet_loss < 0.02) {
         sendingRate = 1.05 * sendingRateList[sendingRateList.length - 1]
-        return;
     } else {
         sendingRate = sendingRateList[sendingRateList.length - 1];
     }
@@ -145,7 +148,9 @@ reportsListenerServer.on("message", (msg, _rinfo) => {
     sendingRateList.push(sendingRate);
     networkReportList.push(networkReport)
 
-    console.log(sendingRate);
-
     fecManager.adaptFecInterval(networkReport, sendingRate);
+
+    if (isVideoParsingFinished) {
+        reportsListenerServer.close();
+    }
 });
