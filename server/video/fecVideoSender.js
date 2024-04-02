@@ -14,10 +14,12 @@ const packetManager = new PacketsManager();
 const fecManager = new FecSenderManager();
 
 // const framesQueue = [];
-// let framesAmount = 0;
+let packetsAmount = 0;
+let packetsSize = 0;
+let initTime = -1;
 let isVideoParsingFinished = false;
 
-let sendingRate = 2983; // 42000 is max; 2983 is actual
+let sendingRate = 3000; // 42000 is max; 2983 is actual
 const sendingRateList = [sendingRate];
 
 const PORT = 41234;
@@ -42,13 +44,26 @@ const videoStream = ffmpeg('./test.mp4')
     })
     .on('end', function () {
         console.log('Finished processing');
-        // framesAmount = framesQueue.length;
         isVideoParsingFinished = true;
-        // processFrames();
+
     }).pipe();
 
 videoStream.on('data', (frame) => {
-    // framesQueue.push(frame);
+    // if (initTime === -1) {
+    //     initTime = Date.now();
+    // }
+
+    // timeDiff = Date.now() - initTime;
+    // if (timeDiff > 1000) {
+    //     console.log(packetsAmount, packetsSize);
+
+    //     packetsAmount = 0;
+    //     packetsSize = 0;
+    // }
+
+    // packetsAmount++;
+    // packetsSize += Buffer.byteLength(frame);
+
     processFrames(frame)
 });
 

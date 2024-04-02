@@ -13,7 +13,7 @@ const metrics = new Metrics();
 const networkReport = new NetworkReport();
 const fecReceiverManager = new FecReceiverManager(metrics);
 
-let packetLoss = 0.03;
+let packetLoss = 0.55;
 let bandwidthLimit = 10000000;
 
 server.on("message", (msg, rinfo) => {
@@ -34,14 +34,14 @@ server.on("message", (msg, rinfo) => {
     fecReceiverManager.metricsManager.packetsCounter++;
     networkReport.packetsAmount++;
 
-    if (networkReport.packetsAmount === 2000) {
-        // packetLoss = 0.3
-        bandwidthLimit = 3000000
-    } else if (networkReport.packetsAmount === 6000) {
-        // packetLoss = 0.03
-        bandwidthLimit = 6000000
+    // if (networkReport.packetsAmount === 2000) {
+    //     // packetLoss = 0.3
+    //     bandwidthLimit = 3000000
+    // } else if (networkReport.packetsAmount === 6000) {
+    //     // packetLoss = 0.03
+    //     bandwidthLimit = 6000000
 
-    }
+    // }
 
     if (packet.type === 1) {
         networkReport.totalBandwidth += rinfo.size;

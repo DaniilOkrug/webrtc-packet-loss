@@ -29,7 +29,7 @@ const videoStream = ffmpeg('./test.mp4')
     .outputOptions('-tune zerolatency')
     .outputOptions('-pix_fmt yuv420p')
     .outputOptions('-r 30')
-    .outputOptions('-s 540x380')
+    .outputOptions('-s 640x480')
     .outputFormat('mpegts')
     .on('error', (err, stdout, stderr) => {
         console.log('Error:', err.message);
