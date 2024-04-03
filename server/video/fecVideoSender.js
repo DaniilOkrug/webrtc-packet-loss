@@ -13,65 +13,70 @@ const reportsListenerServer = dgram.createSocket("udp6");
 const packetManager = new PacketsManager();
 const fecManager = new FecSenderManager();
 
-// const framesQueue = [];
 let packetsAmount = 0;
 let packetsSize = 0;
 let initTime = -1;
 let isVideoParsingFinished = false;
 
-let sendingRate = 1000; // 42000 is max; 2983 is actual
+let sendingRate = 3000; // 42000 is max; 2983 is actual
 const sendingRateList = [sendingRate];
 
 const PORT = 41234;
 
-let ffmpegProcess = ffmpeg('test.mp4')
-const videoStream = ffmpegProcess
-    .videoBitrate(sendingRate, true)
-    .videoCodec('libx264')
-    .inputOptions('-stream_loop 2')
-    .inputOptions('-re')
-    // .outputOptions('-re')
-    .outputOptions('-preset ultrafast')
-    .outputOptions('-tune zerolatency')
-    .outputOptions('-pix_fmt yuv420p')
-    .outputOptions('-r 30')
-    .outputOptions('-s 1280x720')
-    .outputFormat('mpegts')
-    .on('codecData', function (data) {
-        console.log(data);
-    })
-    .on('progress', function(info) {
-        console.log('progress ' + info.percent + '%');
-      })
-    .on('error', (err, stdout, stderr) => {
-        console.log('Error:', err.message);
-        console.log('ffmpeg stdout:', stdout);
-        console.log('ffmpeg stderr:', stderr);
-    })
-    .on('end', function () {
-        console.log('Finished processing');
-        isVideoParsingFinished = true;
+let ffmpegProcess;
+let videoStream;
 
-    }).pipe();
+function createFFmpegProcess(bitrate) {
+    ffmpegProcess = ffmpeg('test.mp4')
+        .videoBitrate(bitrate, true)
+        .videoCodec('libx264')
+        .inputOptions('-stream_loop 2')
+        .inputOptions('-re')
+        .outputOptions('-preset ultrafast')
+        .outputOptions('-tune zerolatency')
+        .outputOptions('-pix_fmt yuv420p')
+        .outputOptions('-r 30')
+        .outputOptions('-s 1280x720')
+        .outputFormat('mpegts')
+        .on('codecData', function (data) {
+            console.log(data);
+        })
+        .on('progress', function (info) {
+            // console.log('progress ' + info.percent + '%');
+        })
+        .on('error', (err, stdout, stderr) => {
+            console.log('Error:', err.message);
+            console.log('ffmpeg stdout:', stdout);
+            console.log('ffmpeg stderr:', stderr);
+        })
+        .on('end', function () {
+            console.log('Finished processing');
+            isVideoParsingFinished = true;
 
-videoStream.on('data', (frame) => {
-    // if (initTime === -1) {
-    //     initTime = Date.now();
-    // }
+        });
 
-    // timeDiff = Date.now() - initTime;
-    // if (timeDiff > 1000) {
-    //     console.log(packetsAmount, packetsSize);
+    videoStream = ffmpegProcess.pipe();
+    videoStream.on('data', (frame) => {
+        // if (initTime === -1) {
+        //     initTime = Date.now();
+        // }
 
-    //     packetsAmount = 0;
-    //     packetsSize = 0;
-    // }
+        // timeDiff = Date.now() - initTime;
+        // if (timeDiff > 1000) {
+        //     console.log(packetsAmount, packetsSize);
 
-    // packetsAmount++;
-    // packetsSize += Buffer.byteLength(frame);
+        //     packetsAmount = 0;
+        //     packetsSize = 0;
+        // }
 
-    processFrames(frame)
-});
+        // packetsAmount++;
+        // packetsSize += Buffer.byteLength(frame);
+
+        processFrames(frame)
+    });
+}
+
+createFFmpegProcess(sendingRate);
 
 async function sendPacketsWithFEC(packets) {
     const promises = [];
@@ -159,7 +164,9 @@ reportsListenerServer.on("message", (msg, _rinfo) => {
     if (networkReportList.length === 0) return networkReportList.push(networkReport);
 
     if (networkReport.packet_loss > 0.1) {
-        sendingRate = sendingRateList[sendingRateList.length - 1] * (1 - 0.5 * networkReport.packet_loss);
+        const newSendingRate = sendingRateList[sendingRateList.length - 1] * (1 - 0.5 * networkReport.packet_loss);
+
+        sendingRate = Math.max(newSendingRate, 100);
     } else if (networkReport.packet_loss < 0.02) {
         sendingRate = 1.05 * sendingRateList[sendingRateList.length - 1]
     } else {
@@ -170,6 +177,13 @@ reportsListenerServer.on("message", (msg, _rinfo) => {
     networkReportList.push(networkReport)
 
     fecManager.adaptFecInterval(networkReport, sendingRate);
+
+    if (sendingRate !== sendingRateList[sendingRateList.length - 2]) {
+        ffmpegProcess.kill('SIGKILL');
+        videoStream.removeAllListeners();
+
+        createFFmpegProcess(sendingRate);
+    }
 
     if (isVideoParsingFinished) {
         reportsListenerServer.close();

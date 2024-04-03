@@ -6,42 +6,39 @@ const dgram = require("dgram");
 const { FecReceiverManager } = require("./FecReceiverManager");
 const { Metrics } = require("./Metrics");
 const { NetworkReport } = require('./NetworkReport');
-
 const server = dgram.createSocket("udp6");
 
 const metrics = new Metrics();
 const networkReport = new NetworkReport();
 const fecReceiverManager = new FecReceiverManager(metrics);
 
-let packetLoss = 0;
-let bandwidthLimit = 10000000;
+let packetLoss = 0.01;
+let bandwidthLimit = 1800000;
+
+// setInterval(() => {
+//     bandwidthLimit -= 1000000;
+// }, 10000)
+
+setTimeout(() => {
+    bandwidthLimit -= 500000;
+}, 2000);
+
+setTimeout(() => {
+    bandwidthLimit += 500000;
+}, 10000);
 
 server.on("message", (msg, rinfo) => {
     const packet = JSON.parse(msg);
 
     // Временное решение
-    if (Math.random() < packetLoss) {
-        if (packet.type === 1) {
-            metrics.packetsLost++;
-            networkReport.packetsLost++;
-        }
+    if (Math.random() < packetLoss || networkReport.getBandwidth() > bandwidthLimit) {
+        // if (packet.type === 1) {
+        metrics.packetsLost++;
+        networkReport.packetsLost++;
+        // }
 
-        return //console.log(`Lost ${packet.id}`);
+        return;
     }
-
-    if (!networkReport.initTime) networkReport.initTime = Date.now();
-
-    fecReceiverManager.metricsManager.packetsCounter++;
-    networkReport.packetsAmount++;
-
-    // if (networkReport.packetsAmount === 2000) {
-    //     // packetLoss = 0.3
-    //     bandwidthLimit = 3000000
-    // } else if (networkReport.packetsAmount === 6000) {
-    //     // packetLoss = 0.03
-    //     bandwidthLimit = 6000000
-
-    // }
 
     if (packet.type === 1) {
         networkReport.totalBandwidth += rinfo.size;
@@ -51,6 +48,11 @@ server.on("message", (msg, rinfo) => {
         networkReport.totalBandwidth += Buffer.from(packet.payload).length;
         fecReceiverManager.recover(packet, rinfo);
     }
+
+    if (!networkReport.initTime) networkReport.initTime = Date.now();
+
+    fecReceiverManager.metricsManager.packetsCounter++;
+    networkReport.packetsAmount++;
 });
 
 setInterval(() => {

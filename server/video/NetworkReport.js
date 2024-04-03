@@ -17,15 +17,20 @@ class NetworkReport {
             bandwidth_media: this.totalMediaBandwidth / Math.max((elapsedTime / 1000), 1)
         }
 
-        // if (elapsedTime > 1000) {
+        if (elapsedTime > 1000) {
             this.initTime = Date.now();
             this.packetsLost = 0;
             this.packetsAmount = 0;
             this.totalBandwidth = 0;
             this.totalMediaBandwidth = 0;
-        // }
+        }
 
         return report;
+    }
+
+    getBandwidth() {
+        const elapsedTime = Date.now() - this.initTime;
+        return this.totalBandwidth / Math.max((elapsedTime / 1000))
     }
 }
 
