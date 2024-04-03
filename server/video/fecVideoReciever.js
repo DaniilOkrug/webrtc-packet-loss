@@ -13,14 +13,14 @@ const metrics = new Metrics();
 const networkReport = new NetworkReport();
 const fecReceiverManager = new FecReceiverManager(metrics);
 
-let packetLoss = 0.55;
+let packetLoss = 0;
 let bandwidthLimit = 10000000;
 
 server.on("message", (msg, rinfo) => {
     const packet = JSON.parse(msg);
 
     // Временное решение
-    if (Math.random() < packetLoss || networkReport.get().bandwidth > bandwidthLimit) {
+    if (Math.random() < packetLoss) {
         if (packet.type === 1) {
             metrics.packetsLost++;
             networkReport.packetsLost++;

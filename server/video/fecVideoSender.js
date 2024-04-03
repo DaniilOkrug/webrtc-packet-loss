@@ -19,15 +19,18 @@ let packetsSize = 0;
 let initTime = -1;
 let isVideoParsingFinished = false;
 
-let sendingRate = 3000; // 42000 is max; 2983 is actual
+let sendingRate = 1000; // 42000 is max; 2983 is actual
 const sendingRateList = [sendingRate];
 
 const PORT = 41234;
 
-const videoStream = ffmpeg('./test.mp4')
-    .videoBitrate(sendingRate)
+let ffmpegProcess = ffmpeg('test.mp4')
+const videoStream = ffmpegProcess
+    .videoBitrate(sendingRate, true)
     .videoCodec('libx264')
-    .inputOptions('-stream_loop 10')
+    .inputOptions('-stream_loop 2')
+    .inputOptions('-re')
+    // .outputOptions('-re')
     .outputOptions('-preset ultrafast')
     .outputOptions('-tune zerolatency')
     .outputOptions('-pix_fmt yuv420p')
@@ -37,6 +40,9 @@ const videoStream = ffmpeg('./test.mp4')
     .on('codecData', function (data) {
         console.log(data);
     })
+    .on('progress', function(info) {
+        console.log('progress ' + info.percent + '%');
+      })
     .on('error', (err, stdout, stderr) => {
         console.log('Error:', err.message);
         console.log('ffmpeg stdout:', stdout);
@@ -148,7 +154,7 @@ const networkReportList = [];
 reportsListenerServer.on("message", (msg, _rinfo) => {
     const networkReport = JSON.parse(msg);
 
-    console.log(networkReport);
+    // console.log(networkReport);
 
     if (networkReportList.length === 0) return networkReportList.push(networkReport);
 
