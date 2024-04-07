@@ -12,8 +12,8 @@ const metrics = new Metrics();
 const networkReport = new NetworkReport();
 const fecReceiverManager = new FecReceiverManager(metrics);
 
-let packetLoss = 0.01;
-let bandwidthLimit = 1800000;
+let packetLoss = 0.15;
+let bandwidthLimit = 2000000;
 
 // setInterval(() => {
 //     bandwidthLimit -= 1000000;
@@ -21,11 +21,25 @@ let bandwidthLimit = 1800000;
 
 setTimeout(() => {
     bandwidthLimit -= 500000;
-}, 2000);
+    console.log((new Date().toLocaleString()));
+}, 10000);
+
+setTimeout(() => {
+    bandwidthLimit -= 500000;
+    console.log((new Date().toLocaleString()));
+}, 30000);
 
 setTimeout(() => {
     bandwidthLimit += 500000;
-}, 10000);
+    console.log((new Date().toLocaleString()));
+
+}, 50000);
+
+setTimeout(() => {
+    bandwidthLimit += 500000;
+    console.log((new Date().toLocaleString()));
+    console.log('end');
+}, 70000);
 
 server.on("message", (msg, rinfo) => {
     const packet = JSON.parse(msg);

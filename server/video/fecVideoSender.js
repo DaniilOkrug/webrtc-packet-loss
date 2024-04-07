@@ -7,15 +7,23 @@ const dgram = require("dgram");
 const { PacketsManager } = require('./PacketsManager');
 const { FecSenderManager } = require('./FecSenderManager');
 
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+const senderCheckReport = createCsvWriter({
+    path: './report/sender_check.csv',
+    header: [
+        { id: 'time', title: 'Time' },
+        { id: 'bandwidth', title: 'Bandwidth' },
+    ]
+})
+
 const server = dgram.createSocket("udp6");
 const reportsListenerServer = dgram.createSocket("udp6");
 
 const packetManager = new PacketsManager();
 const fecManager = new FecSenderManager();
 
-let packetsAmount = 0;
 let packetsSize = 0;
-let initTime = -1;
+let initTime = Date.now();
 let isVideoParsingFinished = false;
 
 let sendingRate = 3000; // 42000 is max; 2983 is actual
@@ -39,7 +47,7 @@ function createFFmpegProcess(bitrate) {
         .outputOptions('-s 1280x720')
         .outputFormat('mpegts')
         .on('codecData', function (data) {
-            console.log(data);
+            // console.log(data);
         })
         .on('progress', function (info) {
             // console.log('progress ' + info.percent + '%');
@@ -52,26 +60,10 @@ function createFFmpegProcess(bitrate) {
         .on('end', function () {
             console.log('Finished processing');
             isVideoParsingFinished = true;
-
         });
 
     videoStream = ffmpegProcess.pipe();
     videoStream.on('data', (frame) => {
-        // if (initTime === -1) {
-        //     initTime = Date.now();
-        // }
-
-        // timeDiff = Date.now() - initTime;
-        // if (timeDiff > 1000) {
-        //     console.log(packetsAmount, packetsSize);
-
-        //     packetsAmount = 0;
-        //     packetsSize = 0;
-        // }
-
-        // packetsAmount++;
-        // packetsSize += Buffer.byteLength(frame);
-
         processFrames(frame)
     });
 }
@@ -96,26 +88,25 @@ async function sendPacketsWithFEC(packets) {
 
 function sendPacket(packet, fecPacket) {
     return new Promise((resolve, reject) => {
+        packetsSize += Buffer.byteLength(packet);
         server.send(packet, PORT, "localhost", (err) => {
             if (err) {
                 console.error('Error sending packet:', err);
                 console.log('Packet error size:', packet.byteLength);
                 reject(err);
             } else {
-                // console.log('Packet sent:', packet.byteLength);
                 resolve();
             }
         });
 
         if (fecPacket) {
             server.send(fecPacket, PORT, "localhost", (err) => {
+                packetsSize += Buffer.from(JSON.parse(fecPacket).payload).byteLength;
                 if (err) {
                     console.error('Error sending FEC packet:', err);
                     console.log('FEC Packet error size:', fecPacket.byteLength);
                     reject(err);
-                    // resolve();
                 } else {
-                    // console.log('FEC Packet sent:', fecPacket.byteLength);
                     resolve();
                 }
             });
@@ -123,12 +114,19 @@ function sendPacket(packet, fecPacket) {
     });
 }
 
-async function processFrames(frame) {
-    // console.log(Buffer.byteLength(frame));
-    // const frame = framesQueue.shift();
-    const packets = packetManager.toPackets(frame);
+setInterval(() => {
+    // console.log(packetsSize);
+    senderCheckReport.writeRecords([
+        {
+            time: Date.now(),
+            bandwidth: packetsSize,
+        }
+    ])
+    packetsSize = 0;
+}, 1000);
 
-    // console.log(framesQueue.length);
+async function processFrames(frame) {
+    const packets = packetManager.toPackets(frame);
 
     try {
         await sendPacketsWithFEC(packets);
@@ -138,15 +136,11 @@ async function processFrames(frame) {
         return;
     }
 
-    // framesAmount--;
-
     if (isVideoParsingFinished) {
         server.close();
         reportsListenerServer.close();
         return;
     }
-
-    // processFrames();
 }
 
 reportsListenerServer.on("listening", () => {
@@ -158,8 +152,6 @@ reportsListenerServer.bind(41235);
 const networkReportList = [];
 reportsListenerServer.on("message", (msg, _rinfo) => {
     const networkReport = JSON.parse(msg);
-
-    // console.log(networkReport);
 
     if (networkReportList.length === 0) return networkReportList.push(networkReport);
 
