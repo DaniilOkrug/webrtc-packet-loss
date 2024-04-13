@@ -9,7 +9,7 @@ class PacketsManager {
      * @returns {Buffer[]}
      */
     toPackets(data) {
-        const dataChunks = this.splitBufferIntoChunks(data, 1500);
+        const dataChunks = this.splitBufferIntoChunks(data, 3000);
         const packets = [];
 
         for (const chunk of dataChunks) {

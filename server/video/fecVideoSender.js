@@ -29,7 +29,7 @@ let currentProgress = {
     timemark: '00:00:00.00',
 }
 
-let sendingRate = 3000;
+let sendingRate = 5000;
 const sendingRateList = [sendingRate];
 
 const PORT = 41234;
@@ -38,19 +38,21 @@ let ffmpegProcess;
 let videoStream;
 
 function createFFmpegProcess(bitrate) {
-    console.log(currentProgress.timemark);
+    // console.log(currentProgress.timemark);
     ffmpegProcess = ffmpeg('test.mp4')
-        .seekInput(currentProgress.timemark)
+        // .seekInput(currentProgress.timemark)
         .videoBitrate(bitrate, true)
         .videoCodec('libx264')
         .inputOptions('-stream_loop 2')
         .inputOptions('-re')
         .outputOptions('-preset ultrafast')
+        .outputOptions('-tune zerolatency')
+        .outputOptions('-pix_fmt yuv420p')
         .outputOptions('-r 30')
         .outputOptions('-s 1280x720')
         .outputFormat('mpegts')
         .on('codecData', function (data) {
-            // console.log(data);
+            console.log(data);
         })
         .on('progress', function (info) {
             if (!isNaN(info.currentKbps)) {

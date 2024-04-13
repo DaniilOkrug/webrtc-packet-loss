@@ -9,7 +9,6 @@ class NetworkReport {
 
     get() {
         const elapsedTime = Date.now() - this.initTime;
-        // console.log('elapsedTime', elapsedTime / 1000);
 
         const report = {
             packet_loss: this.packetsLost === 0 ? 0 : this.packetsLost / (this.packetsAmount + this.packetsLost),

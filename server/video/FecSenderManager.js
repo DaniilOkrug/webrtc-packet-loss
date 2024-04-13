@@ -18,7 +18,8 @@ class FecSenderManager {
                 { id: 'recovery_rate', title: 'Recovery Rate' },
                 { id: 'bandwidth', title: 'Bandwidth' },
                 { id: 'bandwidth_media', title: 'Bandwidth Media' },
-                { id: 'sendingRate', title: 'Sending Rate' }
+                { id: 'sendingRate', title: 'Sending Rate' },
+                { id: 'bandwidth_link', title: 'Bandwidth Link' }
             ]
         })
     }
@@ -78,6 +79,7 @@ class FecSenderManager {
                 bandwidth: networkReport.bandwidth,
                 bandwidth_media: networkReport.bandwidth_media,
                 sendingRate,
+                bandwidth_link: networkReport.bandwidth_link
             }
         ]);
     }
