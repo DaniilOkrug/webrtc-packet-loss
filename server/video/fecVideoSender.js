@@ -7,12 +7,23 @@ const dgram = require("dgram");
 const { PacketsManager } = require('./PacketsManager');
 const { FecSenderManager } = require('./FecSenderManager');
 
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+const senderCheckReport = createCsvWriter({
+    path: './report/sender_check.csv',
+    header: [
+        { id: 'time', title: 'Time' },
+        { id: 'bandwidth', title: 'Bandwidth' },
+    ]
+})
+
 const server = dgram.createSocket("udp6");
 const reportsListenerServer = dgram.createSocket("udp6");
 
 const packetManager = new PacketsManager();
 const fecManager = new FecSenderManager();
 
+let packetsSize = 0;
+let initTime = Date.now();
 let isVideoParsingFinished = false;
 let currentProgress = {
     timemark: '00:00:00.00',
@@ -54,7 +65,6 @@ function createFFmpegProcess(bitrate) {
         .on('end', function () {
             console.log('Finished processing');
             isVideoParsingFinished = true;
-
         });
 
     videoStream = ffmpegProcess.pipe();
@@ -83,6 +93,7 @@ async function sendPacketsWithFEC(packets) {
 
 function sendPacket(packet, fecPacket) {
     return new Promise((resolve, reject) => {
+        packetsSize += Buffer.byteLength(packet);
         server.send(packet, PORT, "localhost", (err) => {
             if (err) {
                 console.error('Error sending packet:', err);
@@ -95,6 +106,7 @@ function sendPacket(packet, fecPacket) {
 
         if (fecPacket) {
             server.send(fecPacket, PORT, "localhost", (err) => {
+                packetsSize += Buffer.from(JSON.parse(fecPacket).payload).byteLength;
                 if (err) {
                     console.error('Error sending FEC packet:', err);
                     console.log('FEC Packet error size:', fecPacket.byteLength);
@@ -107,9 +119,19 @@ function sendPacket(packet, fecPacket) {
     });
 }
 
+setInterval(() => {
+    // console.log(packetsSize);
+    senderCheckReport.writeRecords([
+        {
+            time: Date.now(),
+            bandwidth: packetsSize,
+        }
+    ])
+    packetsSize = 0;
+}, 1000);
+
 async function processFrames(frame) {
     const packets = packetManager.toPackets(frame);
-
 
     try {
         await sendPacketsWithFEC(packets);
@@ -118,7 +140,6 @@ async function processFrames(frame) {
         server.close();
         return;
     }
-
 
     if (isVideoParsingFinished) {
         server.close();

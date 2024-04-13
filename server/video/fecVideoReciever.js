@@ -24,11 +24,25 @@ let bandwidthLimit = 180000000;
 
 // setTimeout(() => {
 //     bandwidthLimit -= 500000;
-// }, 2000);
+//     console.log((new Date().toLocaleString()));
+// }, 10000);
+
+// setTimeout(() => {
+//     bandwidthLimit -= 500000;
+//     console.log((new Date().toLocaleString()));
+// }, 30000);
 
 // setTimeout(() => {
 //     bandwidthLimit += 500000;
-// }, 10000);
+//     console.log((new Date().toLocaleString()));
+
+// }, 50000);
+
+// setTimeout(() => {
+//     bandwidthLimit += 500000;
+//     console.log((new Date().toLocaleString()));
+//     console.log('end');
+// }, 70000);
 
 server.on("message", (msg, rinfo) => {
     const packet = JSON.parse(msg);
