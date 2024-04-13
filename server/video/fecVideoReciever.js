@@ -6,26 +6,29 @@ const dgram = require("dgram");
 const { FecReceiverManager } = require("./FecReceiverManager");
 const { Metrics } = require("./Metrics");
 const { NetworkReport } = require('./NetworkReport');
+const { FramesStream } = require('./FramesStream');
+const ffmpeg = require("fluent-ffmpeg");
+const fs = require("fs");
 const server = dgram.createSocket("udp6");
 
 const metrics = new Metrics();
 const networkReport = new NetworkReport();
 const fecReceiverManager = new FecReceiverManager(metrics);
 
-let packetLoss = 0.01;
-let bandwidthLimit = 1800000;
+let packetLoss = 0.04;
+let bandwidthLimit = 180000000;
 
 // setInterval(() => {
 //     bandwidthLimit -= 1000000;
 // }, 10000)
 
-setTimeout(() => {
-    bandwidthLimit -= 500000;
-}, 2000);
+// setTimeout(() => {
+//     bandwidthLimit -= 500000;
+// }, 2000);
 
-setTimeout(() => {
-    bandwidthLimit += 500000;
-}, 10000);
+// setTimeout(() => {
+//     bandwidthLimit += 500000;
+// }, 10000);
 
 server.on("message", (msg, rinfo) => {
     const packet = JSON.parse(msg);
@@ -77,7 +80,26 @@ process.on('SIGINT', function () {
     metrics.packetsCounter += metrics.packetsLost; // Add lost packets to received packets
     metrics.print();
 
-    process.exit();
+    const packets = [...fecReceiverManager.receivedPackets.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(val => Buffer.from(val[1].payload));
+    const outputStream = fs.createWriteStream('./received_video.flv');
+    const framesStream = new FramesStream(packets);
+
+    ffmpeg(framesStream)
+        .preset('flashvideo')
+        .output(outputStream)
+        .on('end', () => {
+            console.log('Video file created successfully');
+            process.exit();
+        })
+        .on('error', (err, stdout, stderr) => {
+            console.error('Error:', err.message);
+            console.error('ffmpeg stdout:', stdout);
+            console.error('ffmpeg stderr:', stderr);
+            process.exit();
+        })
+        .run();
 });
 
 server.on("listening", () => {

@@ -23,13 +23,10 @@ class FramesStream extends Readable {
 const receivedFrames = [];
 
 const videoStream = ffmpeg('./test.mp4')
-    .videoBitrate(100000)
-    .videoCodec('libx264')
-    .outputOptions('-preset ultrafast')
-    .outputOptions('-tune zerolatency')
-    .outputOptions('-pix_fmt yuv420p')
-    .outputOptions('-r 30')
-    .outputOptions('-s 640x480')
+    .videoBitrate('2983k')
+    .videoCodec('copy')
+    .outputOptions('-qscale 0')
+    .outputOptions('-s 1920x1080')
     .outputFormat('mpegts')
     .on('error', (err, stdout, stderr) => {
         console.log('Error:', err.message);
@@ -42,34 +39,37 @@ const videoStream = ffmpeg('./test.mp4')
     }).pipe();
 
 videoStream.on('data', (frame) => {
-    receivedFrames.push(frame);
+    const packets = splitBufferIntoChunks(frame, 1500)
+    receivedFrames.push(...packets);
 });
 
+function splitBufferIntoChunks(data, maxPacketSize) {
+    const packets = [];
+    let offset = 0;
+
+    while (offset < Buffer.byteLength(data)) {
+        const remaining = Buffer.byteLength(data) - offset;
+        const packetSize = Math.min(maxPacketSize, remaining);
+        const packetData = data.slice(offset, offset + packetSize);
+        packets.push(packetData);
+        offset += packetSize;
+    }
+
+    return packets;
+}
+
 function processFrames() {
-    const outputFilePath = './received_video.mp4';
-
-    const inputOptions = {
-        fps: 30, 
-        videoSize: '640x480', 
-        videoCodec: 'libx264',
-        format: 'mpegts', 
-    };
-
-    const outputStream = fs.createWriteStream(outputFilePath);
+    const outputStream = fs.createWriteStream('./received_video.flv');
     const framesStream = new FramesStream(receivedFrames);
-    const ffmpegProcess = ffmpeg(framesStream);
 
-    // receivedFrames.forEach(frame => {
-    //     ffmpegProcess.input(frame);
-    // });
-
-    ffmpegProcess
-        .inputOptions(inputOptions)
-        .outputOptions('-preset ultrafast')
+    ffmpeg(framesStream)
+        .preset('flashvideo')
+        .outputOptions('-s 1920x1080')
+        .outputOptions('-preset veryslow')
+        .outputOptions('-crf 28')
         .output(outputStream)
         .on('end', () => {
             console.log('Video file created successfully');
-            server.close();
         })
         .on('error', (err, stdout, stderr) => {
             console.error('Error:', err.message);
@@ -78,3 +78,4 @@ function processFrames() {
         })
         .run();
 }
+

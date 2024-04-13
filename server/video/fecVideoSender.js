@@ -13,12 +13,12 @@ const reportsListenerServer = dgram.createSocket("udp6");
 const packetManager = new PacketsManager();
 const fecManager = new FecSenderManager();
 
-let packetsAmount = 0;
-let packetsSize = 0;
-let initTime = -1;
 let isVideoParsingFinished = false;
+let currentProgress = {
+    timemark: '00:00:00.00',
+}
 
-let sendingRate = 3000; // 42000 is max; 2983 is actual
+let sendingRate = 3000;
 const sendingRateList = [sendingRate];
 
 const PORT = 41234;
@@ -27,22 +27,24 @@ let ffmpegProcess;
 let videoStream;
 
 function createFFmpegProcess(bitrate) {
+    console.log(currentProgress.timemark);
     ffmpegProcess = ffmpeg('test.mp4')
+        .seekInput(currentProgress.timemark)
         .videoBitrate(bitrate, true)
         .videoCodec('libx264')
         .inputOptions('-stream_loop 2')
         .inputOptions('-re')
         .outputOptions('-preset ultrafast')
-        .outputOptions('-tune zerolatency')
-        .outputOptions('-pix_fmt yuv420p')
         .outputOptions('-r 30')
         .outputOptions('-s 1280x720')
         .outputFormat('mpegts')
         .on('codecData', function (data) {
-            console.log(data);
+            // console.log(data);
         })
         .on('progress', function (info) {
-            // console.log('progress ' + info.percent + '%');
+            if (!isNaN(info.currentKbps)) {
+                currentProgress = info;
+            }
         })
         .on('error', (err, stdout, stderr) => {
             console.log('Error:', err.message);
@@ -57,21 +59,6 @@ function createFFmpegProcess(bitrate) {
 
     videoStream = ffmpegProcess.pipe();
     videoStream.on('data', (frame) => {
-        // if (initTime === -1) {
-        //     initTime = Date.now();
-        // }
-
-        // timeDiff = Date.now() - initTime;
-        // if (timeDiff > 1000) {
-        //     console.log(packetsAmount, packetsSize);
-
-        //     packetsAmount = 0;
-        //     packetsSize = 0;
-        // }
-
-        // packetsAmount++;
-        // packetsSize += Buffer.byteLength(frame);
-
         processFrames(frame)
     });
 }
@@ -102,7 +89,6 @@ function sendPacket(packet, fecPacket) {
                 console.log('Packet error size:', packet.byteLength);
                 reject(err);
             } else {
-                // console.log('Packet sent:', packet.byteLength);
                 resolve();
             }
         });
@@ -113,9 +99,7 @@ function sendPacket(packet, fecPacket) {
                     console.error('Error sending FEC packet:', err);
                     console.log('FEC Packet error size:', fecPacket.byteLength);
                     reject(err);
-                    // resolve();
                 } else {
-                    // console.log('FEC Packet sent:', fecPacket.byteLength);
                     resolve();
                 }
             });
@@ -124,11 +108,8 @@ function sendPacket(packet, fecPacket) {
 }
 
 async function processFrames(frame) {
-    // console.log(Buffer.byteLength(frame));
-    // const frame = framesQueue.shift();
     const packets = packetManager.toPackets(frame);
 
-    // console.log(framesQueue.length);
 
     try {
         await sendPacketsWithFEC(packets);
@@ -138,15 +119,12 @@ async function processFrames(frame) {
         return;
     }
 
-    // framesAmount--;
 
     if (isVideoParsingFinished) {
         server.close();
         reportsListenerServer.close();
         return;
     }
-
-    // processFrames();
 }
 
 reportsListenerServer.on("listening", () => {
@@ -158,8 +136,6 @@ reportsListenerServer.bind(41235);
 const networkReportList = [];
 reportsListenerServer.on("message", (msg, _rinfo) => {
     const networkReport = JSON.parse(msg);
-
-    // console.log(networkReport);
 
     if (networkReportList.length === 0) return networkReportList.push(networkReport);
 
