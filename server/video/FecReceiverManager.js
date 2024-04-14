@@ -30,17 +30,29 @@ class FecReceiverManager {
         this.writeToReport(fecPacket, rinfo);
 
         const lostPackets = [];
+        const availablePackets = [];
 
         for (const protectedId of fecPacket.protected) {
             if (!this.receivedPackets.get(protectedId)) {
                 lostPackets.push(protectedId);
+            } else {
+                availablePackets.push(protectedId);
             }
         }
 
         // Possible recover only 1 packet from whole set of packets
         if (lostPackets.length === 1) {
             this.metricsManager.packetsRecovered++;
-            this.recoveredPackets.set(lostPackets[0].id, lostPackets[0]);
+
+            let recoveredPacket = Buffer.from(fecPacket.payload);
+            for (const packetId of availablePackets) {
+                const packet = this.receivedPackets.get(packetId);
+                for (let i = 0; i < packet.length; i++) {
+                    recoveredPacket[i] = this.packet.payload[i] ^ packet[i];
+                }
+            }
+
+            this.recoveredPackets.set(lostPackets[0].id, recoveredPacket);
         }
     }
 

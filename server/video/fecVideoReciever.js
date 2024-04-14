@@ -11,8 +11,8 @@ const ffmpeg = require("fluent-ffmpeg");
 const fs = require("fs");
 const server = dgram.createSocket("udp6");
 
-const metrics = new Metrics();
 const networkReport = new NetworkReport();
+const metrics = new Metrics();
 const fecReceiverManager = new FecReceiverManager(metrics);
 
 let packetLoss = 0.01;
@@ -22,35 +22,35 @@ let bandwidthLimit = 2500000;
 //     bandwidthLimit -= 1000000;
 // }, 10000)
 
-setTimeout(() => {
-    bandwidthLimit -= 500000;
-    packetLoss = 0.05
-    console.log((new Date().toLocaleString()));
-}, 10000);
+// setTimeout(() => {
+//     bandwidthLimit -= 500000;
+//     packetLoss = 0.05
+//     console.log((new Date().toLocaleString()));
+// }, 10000);
 
-setTimeout(() => {
-    bandwidthLimit += 500000;
-    packetLoss = 0.01
-    console.log((new Date().toLocaleString()));
-}, 30000);
+// setTimeout(() => {
+//     bandwidthLimit += 500000;
+//     packetLoss = 0.01
+//     console.log((new Date().toLocaleString()));
+// }, 30000);
 
-setTimeout(() => {
-    bandwidthLimit -= 500000;
-    packetLoss = 0.05
-    console.log((new Date().toLocaleString()));
-}, 45000);
+// setTimeout(() => {
+//     bandwidthLimit -= 500000;
+//     packetLoss = 0.05
+//     console.log((new Date().toLocaleString()));
+// }, 45000);
 
-setTimeout(() => {
-    bandwidthLimit += 500000;
-    packetLoss = 0.01
-    console.log((new Date().toLocaleString()));
-}, 60000);
+// setTimeout(() => {
+//     bandwidthLimit += 500000;
+//     packetLoss = 0.01
+//     console.log((new Date().toLocaleString()));
+// }, 60000);
 
-setTimeout(() => {
-    bandwidthLimit += 500000;
-    console.log((new Date().toLocaleString()));
-    console.log('end');
-}, 70000);
+// setTimeout(() => {
+//     bandwidthLimit += 500000;
+//     console.log((new Date().toLocaleString()));
+//     console.log('end');
+// }, 70000);
 
 server.on("message", (msg, rinfo) => {
     const packet = JSON.parse(msg);
@@ -78,7 +78,7 @@ server.on("message", (msg, rinfo) => {
     }
 
     fecReceiverManager.metricsManager.packetsCounter++;
-    networkReport.packetsAmount++;
+    networkReport.processPacket(packet);
 });
 
 setInterval(() => {
@@ -93,7 +93,6 @@ setInterval(() => {
         }
     });
 }, 1000);
-
 
 /**
  * Show metrics at KeyboardInterrupt

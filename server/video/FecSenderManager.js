@@ -7,8 +7,11 @@ class FecSenderManager {
     packet = null;
     ready = false;
     packetCounter = 0;
+    packetsManager;
 
-    constructor() {
+    constructor(packetsManager) {
+        this.packetsManager = packetsManager;
+
         this.reportCsv = createCsvWriter({
             path: process.env.CSV_SENDER_REPORT_PATH,
             header: [
@@ -35,24 +38,30 @@ class FecSenderManager {
             this.packet = {
                 type: 2, // FEC type
                 protected: [parsedPacket.id],
+                payload: Buffer.from(dataPacket)
                 // payload: JSON.parse(JSON.stringify(dataPacket)),
-                payload: Buffer.alloc(dataPacket.length)
+                // payload: Buffer.alloc(dataPacket.length)
             }
         } else {
             this.packet.protected = [...this.packet.protected, parsedPacket.id];
-
+            
+            let origin = this.packet.payload;
+            let target = Buffer.from(dataPacket);
             if (this.packet.payload.length < dataPacket.length) {
-                this.packet.payload = Buffer.alloc(dataPacket.length);
+                origin = Buffer.from(dataPacket);
+                target = this.packet.payload;
             }
 
             for (let i = 0; i < dataPacket.length; i++) {
-                this.packet.payload[i] = this.packet.payload[i] ^ dataPacket[i];
+                origin[i] = origin[i] ^ target[i];
             }
+
+            this.packet.payload = origin;
         }
 
         this.packetCounter++;
-        // console.log('Interval:', this.interval, this.packetCounter);
 
+        if (this.packetCounter >= this.interval) this.packet.id = this.packetsManager.packetId++
 
         return this.packetCounter >= this.interval ? Buffer.from(JSON.stringify(this.packet)) : null;
     }
@@ -69,7 +78,6 @@ class FecSenderManager {
 
         this.interval = Math.round(maxFecInterval - adaptiveFactor * (maxFecInterval - minFecInterval));
 
-        // console.log('Interval:', this.interval);
         this.reportCsv.writeRecords([
             {
                 packet_loss: networkReport.packet_loss,

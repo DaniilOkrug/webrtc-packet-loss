@@ -19,15 +19,12 @@ const senderCheckReport = createCsvWriter({
 const server = dgram.createSocket("udp6");
 const reportsListenerServer = dgram.createSocket("udp6");
 
-const packetManager = new PacketsManager();
-const fecManager = new FecSenderManager();
+const packetsManager = new PacketsManager();
+const fecManager = new FecSenderManager(packetsManager);
 
 let packetsSize = 0;
 let initTime = Date.now();
 let isVideoParsingFinished = false;
-let currentProgress = {
-    timemark: '00:00:00.00',
-}
 
 let sendingRate = 5000;
 const sendingRateList = [sendingRate];
@@ -38,13 +35,12 @@ let ffmpegProcess;
 let videoStream;
 
 function createFFmpegProcess(bitrate) {
-    // console.log(currentProgress.timemark);
     ffmpegProcess = ffmpeg('test.mp4')
-        // .seekInput(currentProgress.timemark)
         .videoBitrate(bitrate, true)
         .videoCodec('libx264')
         .inputOptions('-stream_loop 2')
         .inputOptions('-re')
+        .setStartTime(getVideoTimemark())
         .outputOptions('-preset ultrafast')
         .outputOptions('-tune zerolatency')
         .outputOptions('-pix_fmt yuv420p')
@@ -55,9 +51,7 @@ function createFFmpegProcess(bitrate) {
             console.log(data);
         })
         .on('progress', function (info) {
-            if (!isNaN(info.currentKbps)) {
-                currentProgress = info;
-            }
+            console.log(info);
         })
         .on('error', (err, stdout, stderr) => {
             console.log('Error:', err.message);
@@ -122,7 +116,6 @@ function sendPacket(packet, fecPacket) {
 }
 
 setInterval(() => {
-    // console.log(packetsSize);
     senderCheckReport.writeRecords([
         {
             time: Date.now(),
@@ -133,7 +126,8 @@ setInterval(() => {
 }, 1000);
 
 async function processFrames(frame) {
-    const packets = packetManager.toPackets(frame);
+    const packets = packetsManager.toPackets(frame);
+    // console.log(packets);
 
     try {
         await sendPacketsWithFEC(packets);
@@ -188,3 +182,26 @@ reportsListenerServer.on("message", (msg, _rinfo) => {
         reportsListenerServer.close();
     }
 });
+
+
+function getVideoTimemark() {
+    const endTime = new Date();
+    const duration = endTime - initTime;
+
+    function formatDuration(ms) {
+        const totalSeconds = ms / 1000;
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = Math.floor(totalSeconds % 60);
+        const milliseconds = ms % 1000;
+
+        return `${pad(minutes, 2)}:${pad(seconds, 2)}.${pad(milliseconds, 3)}`;
+    }
+
+    function pad(num, size) {
+        return num.toString().padStart(size, '0');
+    }
+
+    console.log(`Продолжительность: ${formatDuration(duration)}`);
+    return formatDuration(duration);
+}
