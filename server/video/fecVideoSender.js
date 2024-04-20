@@ -22,11 +22,17 @@ const reportsListenerServer = dgram.createSocket("udp6");
 const packetsManager = new PacketsManager();
 const fecManager = new FecSenderManager(packetsManager);
 
+let frameId = 0;
 let packetsSize = 0;
 let initTime = Date.now();
 let isVideoParsingFinished = false;
+let updateFFmpegProcess = false;
+let videoProgress = {
+    timemark: '00:00:00.00'
+}
 
-let sendingRate = 5000;
+let videoBitrate = 3000;
+let sendingRate = videoBitrate + (videoBitrate / 14);
 const sendingRateList = [sendingRate];
 
 const PORT = 41234;
@@ -38,7 +44,7 @@ function createFFmpegProcess(bitrate) {
     ffmpegProcess = ffmpeg('test.mp4')
         .videoBitrate(bitrate, true)
         .videoCodec('libx264')
-        .inputOptions('-stream_loop 2')
+        .inputOptions('-stream_loop 3')
         .inputOptions('-re')
         .setStartTime(getVideoTimemark())
         .outputOptions('-preset ultrafast')
@@ -51,7 +57,13 @@ function createFFmpegProcess(bitrate) {
             console.log(data);
         })
         .on('progress', function (info) {
-            console.log(info);
+            videoProgress = info
+            if (updateFFmpegProcess) {
+                // updateFFmpegProcess = false;
+                // ffmpegProcess.kill('SIGKILL');
+                // videoStream.removeAllListeners();
+                // createFFmpegProcess(sendingRate);
+            }
         })
         .on('error', (err, stdout, stderr) => {
             console.log('Error:', err.message);
@@ -65,7 +77,8 @@ function createFFmpegProcess(bitrate) {
 
     videoStream = ffmpegProcess.pipe();
     videoStream.on('data', (frame) => {
-        processFrames(frame)
+        processFrames(frame, frameId);
+        frameId++;
     });
 }
 
@@ -76,8 +89,8 @@ async function sendPacketsWithFEC(packets) {
 
     for (const packet of packets) {
         const fecPacket = fecManager.transform(packet);
-        promises.push(sendPacket(packet, fecPacket));
-
+        // promises.push(sendPacket(packet, fecPacket));
+        await sendPacket(packet, fecPacket);
         if (fecPacket) {
             fecManager.packetCounter = 0;
             fecManager.packet = null;
@@ -125,9 +138,8 @@ setInterval(() => {
     packetsSize = 0;
 }, 1000);
 
-async function processFrames(frame) {
-    const packets = packetsManager.toPackets(frame);
-    // console.log(packets);
+async function processFrames(frame, id) {
+    const packets = packetsManager.toPackets(frame, id);
 
     try {
         await sendPacketsWithFEC(packets);
@@ -156,11 +168,11 @@ reportsListenerServer.on("message", (msg, _rinfo) => {
 
     if (networkReportList.length === 0) return networkReportList.push(networkReport);
 
-    if (networkReport.packet_loss > 0.1) {
-        const newSendingRate = sendingRateList[sendingRateList.length - 1] * (1 - 0.5 * networkReport.packet_loss);
+    if (networkReport.packet_loss_recovery > 0.1) {
+        const newSendingRate = sendingRateList[sendingRateList.length - 1] * (1 - 0.5 * networkReport.packet_loss_recovery);
 
         sendingRate = Math.max(newSendingRate, 100);
-    } else if (networkReport.packet_loss < 0.02) {
+    } else if (networkReport.packet_loss_recovery < 0.02) {
         sendingRate = 1.05 * sendingRateList[sendingRateList.length - 1]
     } else {
         sendingRate = sendingRateList[sendingRateList.length - 1];
@@ -172,9 +184,9 @@ reportsListenerServer.on("message", (msg, _rinfo) => {
     fecManager.adaptFecInterval(networkReport, sendingRate);
 
     if (sendingRate !== sendingRateList[sendingRateList.length - 2]) {
+        updateFFmpegProcess = true;
         ffmpegProcess.kill('SIGKILL');
         videoStream.removeAllListeners();
-
         createFFmpegProcess(sendingRate);
     }
 

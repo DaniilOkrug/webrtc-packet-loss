@@ -8,7 +8,7 @@ class PacketsManager {
      * @param {Buffer} data 
      * @returns {Buffer[]}
      */
-    toPackets(data) {
+    toPackets(data, frameId) {
         const dataChunks = this.splitBufferIntoChunks(data, 3000);
         const packets = [];
 
@@ -16,6 +16,7 @@ class PacketsManager {
             // console.log(this.packetId);
             const packet = {
                 id: this.packetId++,
+                frameId,
                 type: 1, // Media type
                 payload: chunk,
             }

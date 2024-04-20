@@ -23,10 +23,14 @@ class FramesStream extends Readable {
 const receivedFrames = [];
 
 const videoStream = ffmpeg('./test.mp4')
-    .videoBitrate('2983k')
-    .videoCodec('copy')
-    .outputOptions('-qscale 0')
-    .outputOptions('-s 1920x1080')
+    .videoBitrate('2983k', true)
+    .videoCodec('libx264')
+    .outputOptions('-preset ultrafast')
+    .outputOptions('-tune zerolatency')
+    .outputOptions('-pix_fmt yuv420p')
+    .outputOptions('-r 30')
+    .outputOptions('-s 1280x720')
+    .outputFormat('mpegts')
     .outputFormat('mpegts')
     .on('error', (err, stdout, stderr) => {
         console.log('Error:', err.message);
@@ -39,7 +43,7 @@ const videoStream = ffmpeg('./test.mp4')
     }).pipe();
 
 videoStream.on('data', (frame) => {
-    const packets = splitBufferIntoChunks(frame, 1500)
+    const packets = splitBufferIntoChunks(frame, 15000)
     receivedFrames.push(...packets);
 });
 
@@ -59,13 +63,19 @@ function splitBufferIntoChunks(data, maxPacketSize) {
 }
 
 function processFrames() {
+    const temp = [];
+    for (const frame of receivedFrames) {
+        if (Math.random() < 0.05) continue;
+        temp.push(frame);
+    }
+
     const outputStream = fs.createWriteStream('./received_video.flv');
-    const framesStream = new FramesStream(receivedFrames);
+    const framesStream = new FramesStream(temp);
 
     ffmpeg(framesStream)
         .preset('flashvideo')
-        .outputOptions('-s 1920x1080')
-        .outputOptions('-preset veryslow')
+        .outputOptions('-s 1280x720')
+        .outputOptions('-preset medium')
         .outputOptions('-crf 28')
         .output(outputStream)
         .on('end', () => {

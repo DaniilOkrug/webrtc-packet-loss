@@ -17,6 +17,7 @@ class FecSenderManager {
             header: [
                 { id: 'time', title: 'Time' },
                 { id: 'packet_loss', title: 'Packet loss' },
+                { id: 'packet_loss_recovery', title: 'Packet loss with recovery' },
                 { id: 'fec_rate', title: 'FEC Interval' },
                 { id: 'recovery_rate', title: 'Recovery Rate' },
                 { id: 'bandwidth', title: 'Bandwidth' },
@@ -44,7 +45,7 @@ class FecSenderManager {
             }
         } else {
             this.packet.protected = [...this.packet.protected, parsedPacket.id];
-            
+
             let origin = this.packet.payload;
             let target = Buffer.from(dataPacket);
             if (this.packet.payload.length < dataPacket.length) {
@@ -87,7 +88,8 @@ class FecSenderManager {
                 bandwidth: networkReport.bandwidth,
                 bandwidth_media: networkReport.bandwidth_media,
                 sendingRate,
-                bandwidth_link: networkReport.bandwidth_link
+                bandwidth_link: networkReport.bandwidth_link,
+                packet_loss_recovery: networkReport.packet_loss_recovery
             }
         ]);
     }

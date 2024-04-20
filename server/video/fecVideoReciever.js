@@ -15,8 +15,8 @@ const networkReport = new NetworkReport();
 const metrics = new Metrics();
 const fecReceiverManager = new FecReceiverManager(metrics);
 
-let packetLoss = 0.01;
-let bandwidthLimit = 2500000;
+let packetLoss = 0.00;
+let bandwidthLimit = 25000000;
 
 // setInterval(() => {
 //     bandwidthLimit -= 1000000;
@@ -57,14 +57,13 @@ server.on("message", (msg, rinfo) => {
 
     if (!networkReport.initTime) networkReport.initTime = Date.now();
 
+    const currentPacketLoss = Math.random();
+    const currentBandwidth = networkReport.getBandwidth();
     // Временное решение
-    if (Math.random() < packetLoss || networkReport.getBandwidth() > bandwidthLimit) {
-        //  || networkReport.getBandwidth() > bandwidthLimit
-        // if (packet.type === 1) {
+    if (currentPacketLoss < packetLoss || currentBandwidth > bandwidthLimit) {
+        // console.log(currentPacketLoss, currentBandwidth);
         metrics.packetsLost++;
         networkReport.packetsLost++;
-        // }
-
         return;
     }
 
@@ -74,7 +73,11 @@ server.on("message", (msg, rinfo) => {
         fecReceiverManager.addPacket(packet, rinfo);
     } else if (packet.type === 2) {
         networkReport.totalBandwidth += Buffer.from(packet.payload).length;
-        fecReceiverManager.recover(packet, rinfo);
+        const isRecovered = fecReceiverManager.recover(packet, rinfo);
+
+        if (isRecovered) {
+            networkReport.packetsRecovered++;
+        }
     }
 
     fecReceiverManager.metricsManager.packetsCounter++;
@@ -102,15 +105,24 @@ process.on('SIGINT', function () {
 
     metrics.packetsCounter += metrics.packetsLost; // Add lost packets to received packets
     metrics.print();
-
-    const packets = [...fecReceiverManager.receivedPackets.entries()]
-        .sort((a, b) => a[0] - b[0])
-        .map(val => Buffer.from(val[1].payload));
+    // console.log([...fecReceiverManager.receivedPackets.values()].sort((a, b) => {
+    //     if (a.frameId === b.frameId) return a.id - b.id;
+    //     return a.frameId - b.frameId;
+    // }));
+    const packets = [...fecReceiverManager.receivedPackets.values()].sort((a, b) => {
+        if (a.frameId === b.frameId) return a.id - b.id;
+        return a.frameId - b.frameId;
+    }).map(val => {
+        return Buffer.from(val.payload)
+    });
     const outputStream = fs.createWriteStream('./received_video.flv');
     const framesStream = new FramesStream(packets);
 
     ffmpeg(framesStream)
         .preset('flashvideo')
+        .outputOptions('-s 1280x720')
+        .outputOptions('-preset medium')
+        .outputOptions('-crf 28')
         .output(outputStream)
         .on('end', () => {
             console.log('Video file created successfully');

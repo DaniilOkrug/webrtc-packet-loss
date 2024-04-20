@@ -48,12 +48,18 @@ class FecReceiverManager {
             for (const packetId of availablePackets) {
                 const packet = this.receivedPackets.get(packetId);
                 for (let i = 0; i < packet.length; i++) {
-                    recoveredPacket[i] = this.packet.payload[i] ^ packet[i];
+                    recoveredPacket[i] = recoveredPacket.payload[i] ^ packet[i];
                 }
             }
 
+            // console.log(JSON.parse(recoveredPacket));
+
+            // this.receivedPackets.set(lostPackets[0].id, recoveredPacket);
             this.recoveredPackets.set(lostPackets[0].id, recoveredPacket);
+            return true;
         }
+
+        return false;
     }
 
     writeToReport(packet, rinfo) {
