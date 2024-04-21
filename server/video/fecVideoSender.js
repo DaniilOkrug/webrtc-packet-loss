@@ -82,7 +82,7 @@ function createFFmpegProcess(bitrate) {
     });
 }
 
-createFFmpegProcess(sendingRate);
+createFFmpegProcess(videoBitrate);
 
 async function sendPacketsWithFEC(packets) {
     const promises = [];
@@ -181,7 +181,12 @@ reportsListenerServer.on("message", (msg, _rinfo) => {
     sendingRateList.push(sendingRate);
     networkReportList.push(networkReport)
 
-    fecManager.adaptFecInterval(networkReport, sendingRate);
+    const fecInterval = fecManager.adaptFecInterval(networkReport);
+
+    // sendingRate = videoBitrate + (videoBitrate / fecInterval);
+    videoBitrate = sendingRate - (sendingRate / fecInterval)
+
+    fecManager.report(networkReport, sendingRate, videoBitrate);
 
     if (sendingRate !== sendingRateList[sendingRateList.length - 2]) {
         updateFFmpegProcess = true;

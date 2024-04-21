@@ -3,6 +3,7 @@ const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 class FecReceiverManager {
     receivedPackets = new Map();
     recoveredPackets = new Map();
+    lost = {};
     metricsManager;
 
     constructor(metricsManager) {
@@ -54,7 +55,10 @@ class FecReceiverManager {
 
             // console.log(JSON.parse(recoveredPacket));
 
-            // this.receivedPackets.set(lostPackets[0].id, recoveredPacket);
+            if (this.lost[lostPackets[0].id]) {
+                this.receivedPackets.set(lostPackets[0].id, this.lost[lostPackets[0].id]);
+            }
+
             this.recoveredPackets.set(lostPackets[0].id, recoveredPacket);
             return true;
         }

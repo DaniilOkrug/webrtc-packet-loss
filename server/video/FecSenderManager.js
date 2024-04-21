@@ -17,12 +17,14 @@ class FecSenderManager {
             header: [
                 { id: 'time', title: 'Time' },
                 { id: 'packet_loss', title: 'Packet loss' },
+                { id: 'packet_loss_random', title: 'Packet loss Random' },
                 { id: 'packet_loss_recovery', title: 'Packet loss with recovery' },
                 { id: 'fec_rate', title: 'FEC Interval' },
                 { id: 'recovery_rate', title: 'Recovery Rate' },
                 { id: 'bandwidth', title: 'Bandwidth' },
                 { id: 'bandwidth_media', title: 'Bandwidth Media' },
                 { id: 'sendingRate', title: 'Sending Rate' },
+                { id: 'videoBitrate', title: 'Video bitrate' },
                 { id: 'bandwidth_link', title: 'Bandwidth Link' }
             ]
         })
@@ -67,7 +69,7 @@ class FecSenderManager {
         return this.packetCounter >= this.interval ? Buffer.from(JSON.stringify(this.packet)) : null;
     }
 
-    adaptFecInterval(networkReport, sendingRate) {
+    adaptFecInterval(networkReport) {
         const minFecInterval = 2;
         const maxFecInterval = 14;
 
@@ -79,6 +81,10 @@ class FecSenderManager {
 
         this.interval = Math.round(maxFecInterval - adaptiveFactor * (maxFecInterval - minFecInterval));
 
+        return this.interval;
+    }
+
+    report(networkReport, sendingRate, videoBitrate) {
         this.reportCsv.writeRecords([
             {
                 packet_loss: networkReport.packet_loss,
@@ -88,8 +94,10 @@ class FecSenderManager {
                 bandwidth: networkReport.bandwidth,
                 bandwidth_media: networkReport.bandwidth_media,
                 sendingRate,
+                videoBitrate,
                 bandwidth_link: networkReport.bandwidth_link,
-                packet_loss_recovery: networkReport.packet_loss_recovery
+                packet_loss_recovery: networkReport.packet_loss_recovery,
+                packet_loss_random: networkReport.packet_loss_random
             }
         ]);
     }

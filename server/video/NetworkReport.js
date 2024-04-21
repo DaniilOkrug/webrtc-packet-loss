@@ -27,9 +27,11 @@ class NetworkReport {
             }
         }
 
+        console.log(packetsLost - this.packetsRecovered);
+
         const report = {
-            packet_loss: this.packetsLost === 0 ? 0 : this.packetsLost / (this.packetsAmount + this.packetsLost),
-            packet_loss_recovery: this.packetsLost === 0 ? 0 : Math.max(this.packetsLost - this.packetsRecovered, 0) / (this.packetsAmount + this.packetsLost),
+            packet_loss: packetsLost === 0 ? 0 : packetsLost / (this.packetsAmount + packetsLost),
+            packet_loss_recovery: packetsLost === 0 ? 0 : Math.max(packetsLost - this.packetsRecovered, 0) / (this.packetsAmount + packetsLost),
             bandwidth: this.totalBandwidth / Math.max((elapsedTime / 1000), 1),
             bandwidth_media: this.totalMediaBandwidth / Math.max((elapsedTime / 1000), 1)
         }
