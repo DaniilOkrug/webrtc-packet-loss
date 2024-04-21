@@ -90,8 +90,11 @@ async function sendPacketsWithFEC(packets) {
     for (const packet of packets) {
         const fecPacket = fecManager.transform(packet);
         // promises.push(sendPacket(packet, fecPacket));
-        await sendPacket(packet, fecPacket);
+        await sendPacket(packet);
         if (fecPacket) {
+            setTimeout(async () => {
+                await sendFECPacket(fecPacket);
+            }, 100);
             fecManager.packetCounter = 0;
             fecManager.packet = null;
         }
@@ -100,7 +103,7 @@ async function sendPacketsWithFEC(packets) {
     await Promise.all(promises);
 }
 
-function sendPacket(packet, fecPacket) {
+function sendPacket(packet) {
     return new Promise((resolve, reject) => {
         packetsSize += Buffer.byteLength(packet);
         server.send(packet, PORT, "localhost", (err) => {
@@ -113,18 +116,32 @@ function sendPacket(packet, fecPacket) {
             }
         });
 
-        if (fecPacket) {
-            server.send(fecPacket, PORT, "localhost", (err) => {
-                packetsSize += Buffer.from(JSON.parse(fecPacket).payload).byteLength;
-                if (err) {
-                    console.error('Error sending FEC packet:', err);
-                    console.log('FEC Packet error size:', fecPacket.byteLength);
-                    reject(err);
-                } else {
-                    resolve();
-                }
-            });
-        }
+        // if (fecPacket) {
+        //     server.send(fecPacket, PORT, "localhost", (err) => {
+        //         packetsSize += Buffer.from(JSON.parse(fecPacket).payload).byteLength;
+        //         if (err) {
+        //             console.error('Error sending FEC packet:', err);
+        //             console.log('FEC Packet error size:', fecPacket.byteLength);
+        //             reject(err);
+        //         } else {
+        //             resolve();
+        //         }
+        //     });
+        // }
+    });
+}
+
+function sendFECPacket(fecPacket) {
+    return new Promise((resolve, reject) => {
+        server.send(fecPacket, PORT, "localhost", (err) => {
+            if (err) {
+                console.error('Error sending FEC packet:', err);
+                console.log('FEC Packet error size:', fecPacket.byteLength);
+                reject(err);
+            } else {
+                resolve();
+            }
+        });
     });
 }
 
