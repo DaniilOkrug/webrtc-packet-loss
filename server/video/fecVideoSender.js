@@ -6,6 +6,7 @@ const ffmpeg = require('fluent-ffmpeg');
 const dgram = require("dgram");
 const { PacketsManager } = require('./PacketsManager');
 const { FecSenderManager } = require('./FecSenderManager');
+const { env } = require('process');
 
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const senderCheckReport = createCsvWriter({
@@ -44,9 +45,9 @@ function createFFmpegProcess(bitrate) {
     ffmpegProcess = ffmpeg('test.mp4')
         .videoBitrate(bitrate, true)
         .videoCodec('libx264')
-        .inputOptions('-stream_loop 3')
+        .inputOptions('-stream_loop 10')
         .inputOptions('-re')
-        .setStartTime(getVideoTimemark())
+        // .setStartTime(getVideoTimemark())
         .outputOptions('-preset ultrafast')
         .outputOptions('-tune zerolatency')
         .outputOptions('-pix_fmt yuv420p')
@@ -106,7 +107,7 @@ async function sendPacketsWithFEC(packets) {
 function sendPacket(packet) {
     return new Promise((resolve, reject) => {
         packetsSize += Buffer.byteLength(packet);
-        server.send(packet, PORT, "localhost", (err) => {
+        server.send(packet, PORT, env.RECEVIER_HOST, (err) => {
             if (err) {
                 console.error('Error sending packet:', err);
                 console.log('Packet error size:', packet.byteLength);
@@ -133,7 +134,7 @@ function sendPacket(packet) {
 
 function sendFECPacket(fecPacket) {
     return new Promise((resolve, reject) => {
-        server.send(fecPacket, PORT, "localhost", (err) => {
+        server.send(fecPacket, PORT, env.RECEVIER_HOST, (err) => {
             if (err) {
                 console.error('Error sending FEC packet:', err);
                 console.log('FEC Packet error size:', fecPacket.byteLength);

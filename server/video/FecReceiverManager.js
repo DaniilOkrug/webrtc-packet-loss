@@ -53,8 +53,6 @@ class FecReceiverManager {
                 }
             }
 
-            // console.log(JSON.parse(recoveredPacket));
-
             if (this.lost[lostPackets[0].id]) {
                 this.receivedPackets.set(lostPackets[0].id, this.lost[lostPackets[0].id]);
             }

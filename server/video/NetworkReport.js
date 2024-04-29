@@ -1,10 +1,9 @@
 class NetworkReport {
     initTime;
     packetsAmount = 0;
-    packetsLost = 0;
     packetsRecovered = 0;
     totalBandwidth = 0;
-    totalMediaBandwidth = 0; // Bandwidth of media packets
+    totalMediaBandwidth = 0;
     startPacketId = 0;
     endPacketId = 0;
     packets = new Map();
@@ -27,11 +26,19 @@ class NetworkReport {
             }
         }
 
-        console.log(packetsLost - this.packetsRecovered);
+        let packet_loss_recovery; 
+        let packet_loss;
+        if (packetsLost === 0) {
+            packet_loss = 0;
+            packet_loss_recovery = 0;
+        } else {
+            packet_loss = packetsLost / (this.packetsAmount + packetsLost);
+            packet_loss_recovery = Math.max(packetsLost - this.packetsRecovered, 0) / (this.packetsAmount + packetsLost);
+        }
 
         const report = {
-            packet_loss: packetsLost === 0 ? 0 : packetsLost / (this.packetsAmount + packetsLost),
-            packet_loss_recovery: packetsLost === 0 ? 0 : Math.max(packetsLost - this.packetsRecovered, 0) / (this.packetsAmount + packetsLost),
+            packet_loss,
+            packet_loss_recovery,
             bandwidth: this.totalBandwidth / Math.max((elapsedTime / 1000), 1),
             bandwidth_media: this.totalMediaBandwidth / Math.max((elapsedTime / 1000), 1)
         }
@@ -54,3 +61,4 @@ class NetworkReport {
 }
 
 module.exports = { NetworkReport };
+

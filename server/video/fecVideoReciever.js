@@ -53,16 +53,6 @@ server.on("message", (msg, rinfo) => {
 
     if (!networkReport.initTime) networkReport.initTime = Date.now();
 
-    const currentPacketLoss = Math.random();
-    const currentBandwidth = networkReport.getBandwidth();
-    // Временное решение
-    if (currentPacketLoss < packetLoss || currentBandwidth > bandwidthLimit) {
-        metrics.packetsLost++;
-        networkReport.packetsLost++;
-        fecReceiverManager.lost[packet.id] = packet;
-        return;
-    }
-
     if (packet.type === 1) {
         networkReport.totalBandwidth += rinfo.size;
         networkReport.totalMediaBandwidth += rinfo.size;
@@ -86,7 +76,7 @@ setInterval(() => {
         recovery_rate: metrics.getRecoveryRate(),
         bandwidth_link: bandwidthLimit,
         packet_loss_random: packetLoss
-    })), 41235, "localhost", (err) => {
+    })), 41235, env.SENDER_HOST, (err) => {
         if (err) {
             console.error(err);
             server.close();
@@ -100,12 +90,8 @@ setInterval(() => {
 process.on('SIGINT', function () {
     console.log("\n--Caught interrupt signal--\n");
 
-    metrics.packetsCounter += metrics.packetsLost; // Add lost packets to received packets
+    metrics.packetsCounter += metrics.packetsLost;
     metrics.print();
-    // console.log([...fecReceiverManager.receivedPackets.values()].sort((a, b) => {
-    //     if (a.frameId === b.frameId) return a.id - b.id;
-    //     return a.frameId - b.frameId;
-    // }));
     const packets = [...fecReceiverManager.receivedPackets.values()].sort((a, b) => {
         if (a.frameId === b.frameId) return a.id - b.id;
         return a.frameId - b.frameId;
