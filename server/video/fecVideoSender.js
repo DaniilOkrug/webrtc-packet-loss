@@ -42,7 +42,7 @@ let ffmpegProcess;
 let videoStream;
 
 function createFFmpegProcess(bitrate) {
-    ffmpegProcess = ffmpeg('test.mp4')
+    ffmpegProcess = ffmpeg('6075_shibuya_tokyo_japan_170111052TokyoIlluminatedSigns1080p.mp4')
         .videoBitrate(bitrate, true)
         .videoCodec('libx264')
         .inputOptions('-stream_loop 10')
@@ -202,15 +202,15 @@ reportsListenerServer.on("message", (msg, _rinfo) => {
     const fecInterval = fecManager.adaptFecInterval(networkReport);
 
     // sendingRate = videoBitrate + (videoBitrate / fecInterval);
-    videoBitrate = sendingRate - (sendingRate / fecInterval)
+    videoBitrate = sendingRate - (sendingRate / (fecInterval + 1))
 
     fecManager.report(networkReport, sendingRate, videoBitrate);
 
-    if (sendingRate !== sendingRateList[sendingRateList.length - 2]) {
+    if (videoBitrate !== sendingRateList[sendingRateList.length - 2]) {
         updateFFmpegProcess = true;
         ffmpegProcess.kill('SIGKILL');
         videoStream.removeAllListeners();
-        createFFmpegProcess(sendingRate);
+        createFFmpegProcess(videoBitrate);
     }
 
     if (isVideoParsingFinished) {

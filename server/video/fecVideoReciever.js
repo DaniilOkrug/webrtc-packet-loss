@@ -15,8 +15,8 @@ const networkReport = new NetworkReport();
 const metrics = new Metrics();
 const fecReceiverManager = new FecReceiverManager(metrics);
 
-let packetLoss = 0.01;
-let bandwidthLimit = 2500000;
+let packetLoss = 0.02;
+let bandwidthLimit = 2000000;
 
 setTimeout(() => {
     bandwidthLimit -= 500000;
@@ -37,13 +37,13 @@ setTimeout(() => {
 }, 45000);
 
 setTimeout(() => {
-    // bandwidthLimit += 500000;
+    bandwidthLimit += 500000;
     packetLoss = 0.01
     console.log((new Date().toLocaleString()));
 }, 60000);
 
 setTimeout(() => {
-    // bandwidthLimit += 500000;
+    bandwidthLimit += 500000;
     console.log((new Date().toLocaleString()));
     console.log('end');
 }, 70000);
@@ -52,6 +52,16 @@ server.on("message", (msg, rinfo) => {
     const packet = JSON.parse(msg);
 
     if (!networkReport.initTime) networkReport.initTime = Date.now();
+
+    const currentPacketLoss = Math.random();
+    const currentBandwidth = networkReport.getBandwidth();
+    // Временное решение
+    if (currentPacketLoss < packetLoss || currentBandwidth > bandwidthLimit) {
+        metrics.packetsLost++;
+        networkReport.packetsLost++;
+        fecReceiverManager.lost[packet.id] = packet;
+        return;
+    }
 
     if (packet.type === 1) {
         networkReport.totalBandwidth += rinfo.size;
@@ -76,7 +86,7 @@ setInterval(() => {
         recovery_rate: metrics.getRecoveryRate(),
         bandwidth_link: bandwidthLimit,
         packet_loss_random: packetLoss
-    })), 41235, env.SENDER_HOST, (err) => {
+    })), 41235, 'localhost', (err) => {
         if (err) {
             console.error(err);
             server.close();
